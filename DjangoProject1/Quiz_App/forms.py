@@ -92,6 +92,23 @@ class JoinClassForm(forms.Form):
         ),
     )
 
+
+class AddStudentForm(forms.Form):
+    email_or_username = forms.CharField(
+        max_length=254,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter email or username',
+            'aria-label': 'Email or Username'
+        })
+    )
+
+    classroom_id = forms.IntegerField(
+        required=True,
+        widget=forms.HiddenInput()  # This will hide the field in the form
+    )
+
 # Fetch Data from User in Profile Management
 class ProfileForm(forms.ModelForm):
     class Meta:

@@ -26,3 +26,4 @@ class Classroom(models.Model):
 
     def __str__(self):
         return f"{self.class_name} - {self.section}"
+

@@ -4,10 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
-from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, PasswordChangeForm
+from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
+    PasswordChangeForm, AddStudentForm
 from django.contrib.auth import logout
 from django.contrib import messages
-from .models import Classroom
+from .models import Classroom, Profile
+
 
 def home_view(request):
     classrooms = []
@@ -17,6 +19,18 @@ def home_view(request):
         if request.user.profile.role == 'teacher':
             classrooms = Classroom.objects.filter(teacher=request.user)
     return render(request, 'Quiz_App/landing_page.html', {'classrooms': classrooms})
+
+def add_student(request):
+    if request.method == 'POST':
+        form = AddStudentForm(request.POST)
+        if form.is_valid():
+            email_or_username = form.cleaned_data['email_or_username']
+            # Add logic here (e.g., check if the user exists or create a new user)
+            return redirect('landing')  # Replace with your actual redirect
+    else:
+        form = AddStudentForm()
+
+    return render(request, 'landing_page.html', {'form': form})  # Make sure this matches the template filename
 
 
 def signup_view(request):
@@ -169,8 +183,6 @@ def create_class(request):
 
     return render(request, 'landing_page.html', {'form': form})
 
-
-
 def home(request):
     # Check if the user is logged in
     if request.user.is_authenticated:
@@ -180,6 +192,17 @@ def home(request):
         # If not logged in, render the home page
         return render(request, 'home.html')
 
+def get_classroom_students(request, classroom_id):
+    try:
+        classroom = Classroom.objects.get(id=classroom_id)
+        students = classroom.students.all()
+        student_data = [
+            {"first_name": student.first_name, "last_name": student.last_name}
+            for student in students
+        ]
+        return JsonResponse({"students": student_data})
+    except Classroom.DoesNotExist:
+        return JsonResponse({"error": "Classroom not found"}, status=404)
 
 # Landing page view
 @login_required
@@ -187,14 +210,15 @@ def landing_page(request):
     classrooms = []
     if request.user.is_authenticated:
         if request.user.profile.role == 'teacher':
-            classrooms = Classroom.objects.filter(teacher=request.user)
+            classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
         elif request.user.profile.role == 'student':
-            classrooms = request.user.classrooms.all()  # Many-to-Many relationship
+            classrooms = request.user.classrooms.all().prefetch_related('students')
 
     join_form = JoinClassForm()
     create_form = CreateClassForm()
     profile_form = ProfileForm(instance=request.user)
     password_form = PasswordChangeForm()
+    add_student = AddStudentForm()
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
@@ -202,6 +226,7 @@ def landing_page(request):
         'create_form': create_form,
         'profile_form': profile_form,
         'password_form': password_form,
+        'add_student': add_student,
     })
 
 # Home page view

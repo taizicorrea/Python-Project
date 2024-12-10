@@ -165,7 +165,7 @@
 
         .tab-content {
             flex-grow: 1;
-            padding: 2rem;
+            padding: 0.8rem;
             background-color: #fff;
         }
 
@@ -257,11 +257,11 @@
             background-color: #f8f9fa;
             color: #343a40;
         }
-
     </style>
 </head>
 
 <body>
+
     <!-- Header -->
     <div class="header">
         <div class="d-flex align-items-center">
@@ -271,7 +271,7 @@
 
             {% load static %}
             <img src="{% static 'BulSULogo.png' %}"  href="{% url 'landing' %}" alt="Logo" class="logo">
-            <h5 class="ms-3 mb-0">BulQuiz Classroom</h5>
+            <h5 class="ms-3 mb-0">BulSU Classroom</h5>
         </div>
         <div class="d-flex">
             <!-- Add Icon -->
@@ -431,18 +431,18 @@
                 <!-- Tabs -->
                 <div class="tabs-container">
                     <ul class="nav nav-tabs" id="classroomTabs" role="tablist">
-                        <li class="nav-item">
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="stream-tab" data-bs-toggle="tab" data-bs-target="#stream" type="button">Quizzes</button>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="classwork-tab" data-bs-toggle="tab" data-bs-target="#classwork" type="button">Grades</button>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="people-tab" data-bs-toggle="tab" data-bs-target="#people" type="button">People</button>
                         </li>
                     </ul>
 
-                    <div class="tab-content"  style="margin-top: -25px">
+                    <div class="tab-content">
                         <!-- Quiz Tab with Example Quiz -->
                         <div class="tab-pane fade show active" id="stream">
                             <h5 class="mt-3">Quizzes</h5>
@@ -455,19 +455,36 @@
                                 </div>
                             </div>
                         </div>
+
                         <!-- Your Grades Tab -->
                         <div class="tab-pane fade" id="classwork">
                             <h5 class="mt-3">Your Grades</h5>
                             <p> </p>
                         </div>
+
                         <!-- People Tab -->
                         <div class="tab-pane fade" id="people">
-                            <h5 class="mt-3">People</h5>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <h5 class="mb-0">People</h5>
+                                <!-- Add People Icon Button -->
+                                {% if user.profile.role == 'teacher' %}
+                                        <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0"
+                                            style="width: 40px; height: 40px;"
+                                            data-bs-toggle="modal" data-bs-target="#addPersonModal">
+                                        <i class="bi bi-person-plus"></i>
+                                        </button>
+                                {% endif %}
+                            </div>
+                            <hr>
                             <div class="people-list">
-                                <div class="d-flex align-items-center mb-3">
-                                    <img src="https://via.placeholder.com/40" alt="Student">
-                                    <span>John Smith</span>
-                                </div>
+                                {% for student in classroom.students.all %}
+                                    <div class="d-flex align-items-center mb-3">
+                                        {% load static %}
+                                        <img src="{% static 'user_avatar.png' %}" alt="{{ student.first_name }} {{ student.last_name }}" class="rounded-circle" width="40">
+                                    </div>
+                                {% empty %}
+                                    <span>No students enrolled yet.</span>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -476,6 +493,34 @@
         </div>
     </div>
     {% endif %}
+
+        <!-- Add Student Modal -->
+        <div class="modal fade" id="addPersonModal" tabindex="-1" aria-labelledby="addPersonModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addPersonModalLabel">Add Person</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <!-- Modal Body -->
+                    <div class="modal-body">
+                        <form method="POST" action="{% url 'add_student' %}" id="addStudentForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="classroom_id" id="classroom-id" />
+                            <div class="mb-3">
+                                {{ add_student.as_p }}
+                            </div>
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="addPersonButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal for Account Management -->
         <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
@@ -538,7 +583,6 @@
             </div>
         </div>
 
-
         <!-- Create Class Modal -->
         <div class="modal fade" id="createClassModal" tabindex="-2" aria-labelledby="createClassModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -561,7 +605,7 @@
             </div>
         </div>
 
-    <!-- Join Class Modal -->
+        <!-- Join Class Modal -->
         <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -614,13 +658,19 @@
         </div>
     </div>
 
-        <!-- Footer -->
+    <!-- Footer -->
     <div class="footer">
         <p>Don't see your classes? Try another account</p>
     </div>
 
+    {% load static %}
+    <script type="text/javascript">
+        const defaultAvatar = "{% static 'user_avatar.png' %}";
+    </script>
+
     <!-- Bootstrap JS -->
     <script>
+
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
         const menuToggle = document.getElementById('menu-toggle');
@@ -635,56 +685,99 @@
 
         // Initialize tooltips
         document.addEventListener('DOMContentLoaded', () => {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.forEach((tooltipTriggerEl) => {
-            new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    });
-
-        document.addEventListener('DOMContentLoaded', () => {
-        // Handle tab switching
-        const tabLinks = document.querySelectorAll('.profile-sidebar a[data-bs-toggle="tab"]');
-
-        tabLinks.forEach(tabLink => {
-            tabLink.addEventListener('click', event => {
-                event.preventDefault();
-
-                // Remove active class from all sidebar links
-                tabLinks.forEach(link => link.classList.remove('active'));
-
-                // Add active class to the clicked link
-                tabLink.classList.add('active');
-
-                // Switch the tab content
-                const target = document.querySelector(tabLink.getAttribute('href'));
-                const activeTabs = document.querySelectorAll('.tab-pane.active');
-                activeTabs.forEach(tab => tab.classList.remove('active', 'show'));
-                target.classList.add('active', 'show');
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach((tooltipTriggerEl) => {
+                new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
-    });
 
-function openClassroom(id, section, className, subject, code) {
-    // Hide classroom cards
-    document.getElementById('classroom-cards').style.display = 'none';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Handle tab switching
+            const tabLinks = document.querySelectorAll('.profile-sidebar a[data-bs-toggle="tab"]');
 
-    // Show classroom details
-    const classroomDetails = document.getElementById('classroom-details');
-    classroomDetails.style.display = 'block';
+            tabLinks.forEach(tabLink => {
+                tabLink.addEventListener('click', event => {
+                    event.preventDefault();
 
-    // Update classroom details dynamically
-    document.getElementById('class-name').textContent = `${className} (${subject})`;
-    document.getElementById('class-section').textContent = `Section: ${section}`;
-    document.getElementById('class-join-code').textContent = `Class Code: ${code}`;
-}
+                    // Remove active class from all sidebar links
+                    tabLinks.forEach(link => link.classList.remove('active'));
 
-function showClassroomCards() {
-    // Show classroom cards
-    document.getElementById('classroom-cards').style.display = 'flex';
+                    // Add active class to the clicked link
+                    tabLink.classList.add('active');
 
-    // Hide classroom details
-    document.getElementById('classroom-details').style.display = 'none';
-}
+                    // Switch the tab content
+                    const target = document.querySelector(tabLink.getAttribute('href'));
+                    const activeTabs = document.querySelectorAll('.tab-pane.active');
+                    activeTabs.forEach(tab => tab.classList.remove('active', 'show'));
+                    target.classList.add('active', 'show');
+                });
+            });
+        });
+
+        function openClassroom(id, section, className, subject, code) {
+            // Hide classroom cards
+            document.getElementById('classroom-cards').style.display = 'none';
+
+            // Show classroom details
+            const classroomDetails = document.getElementById('classroom-details');
+            classroomDetails.style.display = 'block';
+
+            // Update classroom details dynamically
+            document.getElementById('class-name').textContent = `${className} (${subject})`;
+            document.getElementById('class-section').textContent = `Section: ${section}`;
+            document.getElementById('class-join-code').innerHTML = `Class Code: <b>${code}</b>`;
+
+            // Fetch enrolled students for the People tab
+            fetch(`/classroom/${id}/students`)
+                .then(response => response.json())
+                .then(data => {
+                    const peopleList = document.querySelector('#people .people-list');
+                    peopleList.innerHTML = ''; // Clear existing content
+
+                    if (data.students.length > 0) {
+                        data.students.forEach(student => {
+                            // Create the dynamic template using spans
+                            const studentDiv = document.createElement('div');
+                            studentDiv.className = 'd-flex align-items-center mb-3';
+
+                            const img = document.createElement('img');
+                            img.alt = `${student.first_name} ${student.last_name}`;
+                            img.className = 'rounded-circle';
+                            img.width = 40;
+
+                            // Use the default avatar if no profile picture is provided
+                            img.src = student.profile_picture_url || defaultAvatar;
+
+                            const span = document.createElement('span');
+                            span.textContent = `${student.first_name} ${student.last_name}`;
+
+                            // Append elements to the student div
+                            studentDiv.appendChild(img);
+                            studentDiv.appendChild(span);
+
+                            // Append student div to the people list
+                            peopleList.appendChild(studentDiv);
+                        });
+                    } else {
+                        // Show a message if no students are enrolled
+                        const noStudentsMessage = document.createElement('span');
+                        noStudentsMessage.textContent = 'No students enrolled yet.';
+                        noStudentsMessage.className = 'text-muted'; // Optional styling for the message
+                        peopleList.appendChild(noStudentsMessage);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching students:', error);
+                });
+        }
+
+        function showClassroomCards() {
+            // Show classroom cards
+            document.getElementById('classroom-cards').style.display = 'flex';
+
+            // Hide classroom details
+            document.getElementById('classroom-details').style.display = 'none';
+        }
 
     </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
