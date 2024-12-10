@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BulSU Classroom</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script><!-- SweetAlert CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.js"></script>
+    <style>
+        body {
+            background-color: #fff;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: #fff;
+            border-right: 1px solid #dee2e6;
+            padding: 15px 0;
+            transition: width 0.3s;
+            overflow: hidden;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar.expanded {
+            width: 300px;
+        }
+        .sidebar a {
+            color: #495057;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: rgb(223, 236, 252);
+            border-radius: 5px;
+            border-radius: 0 25px 25px 0; /* Active state also includes the rounded left border */
+            margin-right: 10px;
+        }
+
+        .sidebar a:hover{
+            background-color: rgb(248, 248, 248);
+        }
+        .sidebar a i {
+            font-size: 1.2rem;
+            margin-right: 10px;
+        }
+
+        .sidebar.collapsed a i {
+            margin-right: 0;
+        }
+        .sidebar.collapsed a span {
+            display: none;
+        }
+
+        .header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header img {
+            height: 40px;
+        }
+
+        .header .profile img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .main-content {
+            transition: margin-left 0.3s;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .main-content.expanded {
+            margin-left: 250px;
+        }
+
+        .main-content.collapsed {
+            margin-left: 80px;
+        }
+
+        .illustration img {
+            max-width: 200px;
+            margin: auto;
+            display: block;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .logo{
+            margin-left: 15px;
+        }
+
+        .modal-content {
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-height: 90vh;
+        }
+
+        .modal-header {
+        border-bottom: none;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+         }
+
+        .modal-header h5 {
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        #menu-modal {
+            display: flex;
+            padding: 0;
+        }
+
+        .profile-sidebar {
+            width: 250px;
+            background-color: #f1f1f1;
+            padding: 2rem 1rem;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .profile-sidebar a {
+            display: block;
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 1rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .profile-sidebar a.active,
+        .profile-sidebar a:hover {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            padding: 2rem;
+            background-color: #fff;
+        }
+
+        .tab-pane h5 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .tab-pane .form-control {
+            border-radius: 8px;
+        }
+
+        .btn-primary {
+            border-radius: 8px;
+        }
+
+        .profile-image-container {
+            text-align: center;
+        }
+
+        .profile-image-container img {
+            height: 150px;
+            width: 150px;
+            border-radius: 50%;
+        }
+
+        .profile-image-container .upload-btn {
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .text-danger {
+            font-size: 0.95rem;
+        }
+
+        .alert {
+            transition: opacity 0.5s ease-out;
+        }
+
+        .content-area {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        .banner {
+            height: 150px;
+            background: linear-gradient(135deg, #4caf50, #81c784);
+            border-radius: 15px;
+        }
+
+        .banner {
+            padding: 15px 20px; /* Adjust padding as needed */
+        }
+
+        .banner .btn {
+            margin-bottom: 10px; /* Adds space between back button and text */
+        }
+
+        .card {
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        .tabs-container {
+            margin-top: 20px;
+        }
+
+        .people-list img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .btn-light {
+            background-color: #ffffff;
+            color: #495057;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-light:hover {
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="d-flex align-items-center">
+            <button class="btn p-0 border-0 bg-transparent" id="menu-toggle" title="Toggle Menu">
+            <i class="bi bi-list fs-4" id="menu-icon"></i>
+            </button>
+
+            {% load static %}
+            <img src="{% static 'BulSULogo.png' %}"  href="{% url 'landing' %}" alt="Logo" class="logo">
+            <h5 class="ms-3 mb-0">BulQuiz Classroom</h5>
+        </div>
+        <div class="d-flex">
+            <!-- Add Icon -->
+
+            <!-- Add Button with Dropdown -->
+            <div class="dropdown">
+                <button class="btn p-0 border-0 bg-transparent me-3" type="button" id="addDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Add or join a class">
+                    <i class="bi bi-plus fs-3"></i>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="addDropdown">
+                    {% if user.profile.role == 'student' %}
+                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#joinClassModal" style="cursor: pointer;">Join Class</a></li>
+                    {% endif %}
+
+                    {% if user.profile.role == 'teacher' %}
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#createClassModal" style="cursor: pointer;">Create Class</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Profile Picture -->
+            <div class="dropdown">
+                <button class="btn p-0 border-0 bg-transparent" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    {% load static %}
+                    <img src="{% static 'user_avatar.png' %}" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px;">
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                <li><a class="dropdown-item" data-url="{% url 'profile' %}" data-bs-toggle="modal" data-bs-target="#profileModal"  id="profile-link">Profile</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#logoutModal">Logout</a></li>
+                </ul>
+
+            </div>
+        </div>
+    </div>
+    {% if messages %}
+        <script type="text/javascript">
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    // Success message
+                    Swal.fire({
+                        icon: 'success',  // Use 'success' to show the checkmark icon
+                        title: '',  // Empty title
+                        text: '{{ message|escapejs }}',  // The message content
+                        showConfirmButton: false,  // No confirm button
+                        position: 'top-end',  // Position the popup at the top-right
+                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
+                        timerProgressBar: true,  // Show a progress bar
+                        toast: true,  // Display as a toast (small notification)
+                        background: '#00a550',  // Green background for success
+                        color: '#fff',  // White text for contrast
+                        iconColor: '#fff',  // White checkmark icon color
+                        customClass: {
+                            popup: 'check-popup',
+                        }
+                    });
+                {% elif message.tags == 'error' %}
+                    // Error message
+                    Swal.fire({
+                        icon: 'error',  // Use 'error' to show the cross icon
+                        title: '',  // Empty title
+                        text: '{{ message|escapejs }}',  // The message content
+                        showConfirmButton: false,  // No confirm button
+                        position: 'top-end',  // Position the popup at the top-right
+                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
+                        timerProgressBar: true,  // Show a progress bar
+                        toast: true,  // Display as a toast (small notification)
+                        background: '#d33',  // Red background for error
+                        color: '#fff',  // White text for contrast
+                        iconColor: '#fff',  // White cross icon color
+                        customClass: {
+                            popup: 'check-popup',
+                        }
+                    });
+                {% endif %}
+            {% endfor %}
+        </script>
+    {% endif %}
+
+    <!-- Layout -->
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar expanded" id="sidebar">
+            <a href="#" class="active"><i class="bi bi-house"></i> <span>Home</span></a>
+            <a href="#"><i class="bi bi-archive"></i> <span>Archived classes</span></a>
+            <a href="#"><i class="bi bi-gear"></i> <span>Settings</span></a>
+        </div>
+
+    <!-- Illustration (Only visible if no classrooms exist) -->
+    {% if not classrooms %}
+    <div class="container vh-100 d-flex flex-column justify-content-center align-items-center">
+        <div class="illustration text-center">
+            {% load static %}
+            <img src="{% static 'display.gif' %}" alt="Illustration">
+        </div>
+        <h5 class="my-4 text-center">Add a class to get started</h5>
+        <form method="post" class="w-50 mx-auto">
+            {% csrf_token %}
+            <div class="d-flex justify-content-center gap-2">
+                {% if user.profile.role == 'teacher' %}
+                    <!-- Create Class button triggers the modal -->
+                    <button type="button" class="btn btn-outline-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#createClassModal">
+                        Create Class
+                    </button>
+                {% endif %}
+                {% if user.profile.role == 'student' %}
+                    <button type="button" class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#joinClassModal">
+                        Join Class
+                    </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if classrooms %}
+    <div class="container">
+        <div class="content-area">
+            <div id="classroom-cards" class="row g-4">
+                {% for classroom in classrooms %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-lg h-100" onclick="openClassroom({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}')">
+                            <!-- Card Header -->
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4caf50, #81c784);">
+                                <h5 class="card-title mb-0">{{ classroom.class_name }}</h5>
+                                <p class="mb-0">{{ classroom.subject }}</p>
+                            </div>
+                            <!-- Card Body -->
+                            <div class="card-body">
+                                {% if user.profile.role == 'student' %}
+                                    <p><strong>Instructor:</strong> {{ classroom.teacher.first_name }} {{ classroom.teacher.last_name }}</p>
+                                {% elif user.profile.role == 'teacher' %}
+                                    <p><strong>Room:</strong> {{ classroom.room }}</p>
+                                {% endif %}
+                                <p><strong>Section:</strong> {{ classroom.section }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="classroom-details" style="display: none;">
+                <!-- Banner with Classroom Details -->
+                <div class="banner d-flex flex-column align-items-start px-4 py-3" style="margin-top: -25px;">
+                    <!-- Back Button -->
+                    <button class="btn btn-light btn-sm rounded-circle mb-2" onclick="showClassroomCards()" title="Back">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <!-- Classroom Info -->
+                    <div class="text-white">
+                        <h3 id="class-name" class="mb-0"></h3>
+                        <p id="class-section" class="mb-1" style=""></p>
+                        <p id="class-join-code" class="mb-0"></p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs-container">
+                    <ul class="nav nav-tabs" id="classroomTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="stream-tab" data-bs-toggle="tab" data-bs-target="#stream" type="button">Quizzes</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="classwork-tab" data-bs-toggle="tab" data-bs-target="#classwork" type="button">Grades</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="people-tab" data-bs-toggle="tab" data-bs-target="#people" type="button">People</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content"  style="margin-top: -25px">
+                        <!-- Quiz Tab with Example Quiz -->
+                        <div class="tab-pane fade show active" id="stream">
+                            <h5 class="mt-3">Quizzes</h5>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title"><strong>Django Long Quiz</strong></h6>
+                                    <p class="card-text">Posted on: <em>Dec 8, 2024</em></p>
+                                    <p><strong>Due:</strong> Dec 15, 2024</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Quiz</a>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Your Grades Tab -->
+                        <div class="tab-pane fade" id="classwork">
+                            <h5 class="mt-3">Your Grades</h5>
+                            <p> </p>
+                        </div>
+                        <!-- People Tab -->
+                        <div class="tab-pane fade" id="people">
+                            <h5 class="mt-3">People</h5>
+                            <div class="people-list">
+                                <div class="d-flex align-items-center mb-3">
+                                    <img src="https://via.placeholder.com/40" alt="Student">
+                                    <span>John Smith</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+        <!-- Modal for Account Management -->
+        <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h5>Account Management</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <!-- Modal Body -->
+                    <div class="modal-body" id="menu-modal">
+                        <!-- Profile Sidebar -->
+                        <div class="profile-sidebar">
+                            <a href="#profile" class="active" data-bs-toggle="tab">
+                                <i class="bi bi-person-circle"></i> Profile
+                            </a>
+                            <a href="#security" data-bs-toggle="tab">
+                                <i class="bi bi-shield-lock"></i> Security
+                            </a>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content">
+                            <!-- Profile Section -->
+                            <div class="tab-pane fade show active" id="profile">
+                                <h5>Profile</h5>
+                                <div class="profile-image-container">
+                                    {% load static %}
+                                    <img src="{% static 'user_avatar.png' %}" alt="Profile Picture">
+                                </div>
+                                <form method="post" action="{% url 'account_management' %}">
+                                    {% csrf_token %}
+                                    {{ profile_form.as_p }}
+                                    <div class="text-end">
+                                        <button type="submit" name="update_profile" class="btn btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <!-- Security Section -->
+                            <div class="tab-pane fade" id="security">
+                                <h5>Password</h5>
+                                <form method="post" action="{% url 'account_management' %}">
+                                    {% csrf_token %}
+                                    {{ password_form.as_p }}
+                                    <div class="text-end">
+                                        <button type="submit" name="change_password" class="btn btn-primary">Update Password</button>
+                                    </div>
+                                </form>
+                                <h6 class="text-danger">Delete Account</h6>
+                                <p class="text-danger">Deleting your account will permanently erase all data. This action cannot be undone.</p>
+                                <form method="POST" action="{% url 'account_management' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" name="delete_account" class="btn btn-danger">Delete Account</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Create Class Modal -->
+        <div class="modal fade" id="createClassModal" tabindex="-2" aria-labelledby="createClassModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createClassModalLabel">Create Class</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="POST" action="{% url 'create_class' %}">
+                            {% csrf_token %}
+                            {{ create_form.as_p }}
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Join Class Modal -->
+        <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="joinClassModalLabel">Class code</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Ask your teacher for the class code, then enter it here.</p>
+                        <form method="POST" action="{% url 'join_class' %}">
+                            {% csrf_token %}
+                            <div class="form-group mb-3">
+                                {{ join_form.class_code }}
+                            </div>
+                            <h6>To sign in with a class code:</h6>
+                            <ul>
+                                <li>Use an authorized account</li>
+                                <li>Use a class code with 5-7 letters or numbers, and no spaces or symbols</li>
+                            </ul>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Join</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Bootstrap Modal for Logout Confirmation -->
+    <div class="modal fade" id="logoutModal" tabindex="-2" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to log out?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Yes, log me out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Footer -->
+    <div class="footer">
+        <p>Don't see your classes? Try another account</p>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        const menuToggle = document.getElementById('menu-toggle');
+
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            sidebar.classList.toggle('expanded');
+            mainContent.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        });
+
+
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', () => {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach((tooltipTriggerEl) => {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+        document.addEventListener('DOMContentLoaded', () => {
+        // Handle tab switching
+        const tabLinks = document.querySelectorAll('.profile-sidebar a[data-bs-toggle="tab"]');
+
+        tabLinks.forEach(tabLink => {
+            tabLink.addEventListener('click', event => {
+                event.preventDefault();
+
+                // Remove active class from all sidebar links
+                tabLinks.forEach(link => link.classList.remove('active'));
+
+                // Add active class to the clicked link
+                tabLink.classList.add('active');
+
+                // Switch the tab content
+                const target = document.querySelector(tabLink.getAttribute('href'));
+                const activeTabs = document.querySelectorAll('.tab-pane.active');
+                activeTabs.forEach(tab => tab.classList.remove('active', 'show'));
+                target.classList.add('active', 'show');
+            });
+        });
+    });
+
+function openClassroom(id, section, className, subject, code) {
+    // Hide classroom cards
+    document.getElementById('classroom-cards').style.display = 'none';
+
+    // Show classroom details
+    const classroomDetails = document.getElementById('classroom-details');
+    classroomDetails.style.display = 'block';
+
+    // Update classroom details dynamically
+    document.getElementById('class-name').textContent = `${className} (${subject})`;
+    document.getElementById('class-section').textContent = `Section: ${section}`;
+    document.getElementById('class-join-code').textContent = `Class Code: ${code}`;
+}
+
+function showClassroomCards() {
+    // Show classroom cards
+    document.getElementById('classroom-cards').style.display = 'flex';
+
+    // Hide classroom details
+    document.getElementById('classroom-details').style.display = 'none';
+}
+
+    </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

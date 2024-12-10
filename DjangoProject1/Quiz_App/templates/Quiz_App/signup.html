@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup - Quiz App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 15px;
+        }
+
+
+        .card {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 30px;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .alert-custom {
+            justify-content: center;
+            align-items: center;
+            max-height: 130px;
+            font-size: 15.5px;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="text-center">Sign Up</h2>
+                <form action="{% url 'signup' %}" method="POST">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-custom" role="alert">
+                        <ul>
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    {{ form.first_name.label_tag }}
+                    {{ form.first_name }}
+                    {% for error in form.first_name.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.last_name.label_tag }}
+                    {{ form.last_name }}
+                    {% for error in form.last_name.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.username.label_tag }}
+                    {{ form.username }}
+                    {% for error in form.username.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.email.label_tag }}
+                    {{ form.email }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.password.label_tag }}
+                    {{ form.password }}
+                    {% for error in form.password.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.reenter_password.label_tag }}
+                    {{ form.reenter_password }}
+                    {% for error in form.reenter_password.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Role as the last field -->
+                <div class="mb-3">
+                    {{ form.role.label_tag }}
+                    {{ form.role }}
+                    {% for error in form.role.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+            </form>
+
+                <div class="text-center mt-3">
+                    <p>Already have an account? <a href="{% url 'login' %}" class="text-decoration-none">Login here</a>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
