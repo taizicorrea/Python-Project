@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+        .card {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+        }
+
+        h2{
+            font-family: 'Poppins', sans-serif;
+            font-family: 800;
+            font-size: 30px;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            padding: 20px;
+        }
+
+        .text-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .form-control {
+            border: 1px solid #00bcd4;
+            border-radius: 6px;
+            padding: 50px 20px;
+            font-size: 16px;
+            background-color: #f9f9f9;
+            box-shadow: none;
+        }
+        .form-control:focus {
+            border-color: #00bcd4;
+            box-shadow: 0 0 0 0.2rem rgba(0, 188, 212, 0.25);
+        }
+        .input-group-text {
+            border: none;
+            background: none;
+            font-size: 18px;
+            color: #00bcd4;
+        }
+        .input-group {
+            align-items: center;
+        }
+
+        .form-floating .form-control {
+            height: 52px;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        .form-floating label {
+            font-size: 0.85rem;
+        }
+
+        .google-login-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            background-color: #fff;
+        }
+
+        .google-login-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .google-login-btn:hover {
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .or-divider:not(:empty)::before {
+            margin-right: 10px;
+        }
+
+        .or-divider:not(:empty)::after {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="text-center">Login</h2>
+
+                        <!-- Display success message after successful signup -->
+                            {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Display error message if invalid login attempt -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ form.non_field_errors|striptags }}
+                        </div>
+                        {% endif %}
+
+                        <form action="{% url 'login' %}" method="POST">
+                            {% csrf_token %}
+
+                            <!-- Floating label for email -->
+                            <div class="form-floating mb-3">
+                                {{ form.username }}  <!-- Render the email field -->
+                                <label id="username_or_email">Username/Email</label>
+                                {% if form.username.errors %}
+                                    <div class="text-danger">{{ form.username.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Floating label for password -->
+                            <div class="form-floating mb-3">
+                                {{ form.password }}  <!-- Render the password field -->
+                                <label id="password">Password</label>
+                                {% if form.password.errors %}
+                                    <div class="text-danger">{{ form.password.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">Login</button>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="form-check">
+                                    <!-- You can add remember me checkbox here if needed -->
+                                </div>
+                                <a href="/forgot-password" class="text-decoration-none">Forgot Password?</a>
+                            </div>
+                        </form>
+
+                        <!-- Divider with "or" -->
+                        <div class="or-divider my-3">or</div>
+
+                        <!-- Google Login Button -->
+                        <div class="text-center">
+                            <a href="/auth/google" class="google-login-btn">
+                                <img src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google logo">
+                            </a>
+                        </div>
+
+                        <!-- Sign-up section -->
+                        <div class="text-center mt-4">
+                            <p>Don't have an account? <a href="{% url 'signup' %}" class="text-primary text-decoration-none">Sign Up</a></p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
