@@ -1,7 +1,8 @@
 import random
 import string
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.contrib.auth.models import User
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
@@ -9,7 +10,6 @@ from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateCl
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom, Profile
-
 
 def home_view(request):
     classrooms = []
@@ -20,17 +20,43 @@ def home_view(request):
             classrooms = Classroom.objects.filter(teacher=request.user)
     return render(request, 'Quiz_App/landing_page.html', {'classrooms': classrooms})
 
+
 def add_student(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = AddStudentForm(request.POST)
         if form.is_valid():
-            email_or_username = form.cleaned_data['email_or_username']
-            # Add logic here (e.g., check if the user exists or create a new user)
-            return redirect('landing')  # Replace with your actual redirect
+            classroom_id = request.POST.get('classroom_id')
+            classroom = get_object_or_404(Classroom, id=classroom_id)
+            student_email_or_username = form.cleaned_data['email_or_username']
+
+            try:
+                # Try to get the student by email
+                student = User.objects.get(email=student_email_or_username)
+            except User.DoesNotExist:
+                try:
+                    # If not found by email, try by username
+                    student = User.objects.get(username=student_email_or_username)
+                except User.DoesNotExist:
+                    # If no student found, show error message
+                    messages.error(request, "Student not found.")
+                    return redirect('landing')  # Redirect to the page where you want to show the message
+
+            # Add the student to the classroom
+            classroom.students.add(student)
+            classroom.save()
+
+            # Show success message
+            messages.success(request, f"Student {student} has been added to the classroom.")
+
+            return redirect('landing')  # Redirect to the appropriate page (e.g., classroom page)
+        else:
+            messages.error(request, "Form is not valid.")
+            return redirect('landing')  # Redirect to the form page
+
     else:
         form = AddStudentForm()
 
-    return render(request, 'landing_page.html', {'form': form})  # Make sure this matches the template filename
+    return render(request, 'landing_page.html', {'add_student': form})
 
 
 def signup_view(request):
@@ -113,7 +139,6 @@ def account_management(request):
     }
     return render(request, 'landing_page.html', context)
 
-
 def join_class(request):
     if request.method == 'POST':
         form = JoinClassForm(request.POST)
@@ -192,15 +217,32 @@ def home(request):
         # If not logged in, render the home page
         return render(request, 'home.html')
 
+# Process to get the Students and Teacher in People Tab.
 def get_classroom_students(request, classroom_id):
     try:
         classroom = Classroom.objects.get(id=classroom_id)
         students = classroom.students.all()
+        teacher = classroom.teacher
+
+        current_user = 'teacher' if request.user == teacher else 'student'
+
         student_data = [
             {"first_name": student.first_name, "last_name": student.last_name}
             for student in students
         ]
-        return JsonResponse({"students": student_data})
+
+        teacher_data = {
+            "id": teacher.id,
+            "first_name": teacher.first_name,
+            "last_name": teacher.last_name
+        }
+
+        return JsonResponse({
+            "teacher": teacher_data,
+            "students": student_data,
+            "current_user": current_user,
+        })
+
     except Classroom.DoesNotExist:
         return JsonResponse({"error": "Classroom not found"}, status=404)
 
@@ -208,11 +250,18 @@ def get_classroom_students(request, classroom_id):
 @login_required
 def landing_page(request):
     classrooms = []
+    selected_classroom = None
+
     if request.user.is_authenticated:
         if request.user.profile.role == 'teacher':
             classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
         elif request.user.profile.role == 'student':
             classrooms = request.user.classrooms.all().prefetch_related('students')
+
+    # Check if a classroom ID is provided to show its details
+    classroom_id = request.GET.get('classroom_id')
+    if classroom_id:
+        selected_classroom = get_object_or_404(Classroom, id=classroom_id)
 
     join_form = JoinClassForm()
     create_form = CreateClassForm()
@@ -227,7 +276,9 @@ def landing_page(request):
         'profile_form': profile_form,
         'password_form': password_form,
         'add_student': add_student,
+        'selected_classroom': selected_classroom,  # Pass selected classroom to template
     })
+
 
 # Home page view
 def home_view(request):
@@ -241,4 +292,4 @@ def logout_view(request):
     return response
 
 def profile_view(request):
-    return render(request, 'Quiz_App/profile_management.html')
+    return render(request, 'landing_page.html')

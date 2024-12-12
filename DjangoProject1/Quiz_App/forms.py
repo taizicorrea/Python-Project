@@ -104,11 +104,6 @@ class AddStudentForm(forms.Form):
         })
     )
 
-    classroom_id = forms.IntegerField(
-        required=True,
-        widget=forms.HiddenInput()  # This will hide the field in the form
-    )
-
 # Fetch Data from User in Profile Management
 class ProfileForm(forms.ModelForm):
     class Meta:
@@ -140,7 +135,7 @@ class CreateClassForm(forms.Form):
         'placeholder': 'Enter room'
     }))
 
-
+# Change Password Forms.
 class PasswordChangeForm(forms.Form):
     current_password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'id': 'currentPassword'}),
