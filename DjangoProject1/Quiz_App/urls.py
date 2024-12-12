@@ -1,6 +1,7 @@
 # Quiz_App/urls.py
 from django.urls import path
-from .views import signup_view, login_view, home_view, landing_page, logout_view, profile_view, join_class, create_class, account_management, get_classroom_students, add_student
+from .views import signup_view, login_view, home_view, landing_page, logout_view, profile_view, join_class, \
+    create_class, account_management, get_classroom_students, add_student
 
 urlpatterns = [
     path('', home_view, name='home'),
@@ -14,5 +15,4 @@ urlpatterns = [
     path('account_management/', account_management, name='account_management'),
     path('classroom/<int:classroom_id>/students', get_classroom_students, name='get_classroom_students'),
     path('add_student/', add_student, name='add_student'),
-
 ]

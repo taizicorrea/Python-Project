@@ -354,7 +354,9 @@
     <div class="d-flex">
         <!-- Sidebar -->
         <div class="sidebar expanded" id="sidebar">
-            <a href="#" class="active"><i class="bi bi-house"></i> <span>Home</span></a>
+            <a href="{% url 'landing' %}" class="active">
+                <i class="bi bi-house"></i> <span>Home</span>
+            </a>
             <a href="#"><i class="bi bi-archive"></i> <span>Archived classes</span></a>
             <a href="#"><i class="bi bi-gear"></i> <span>Settings</span></a>
         </div>
@@ -470,20 +472,20 @@
                                 {% if user.profile.role == 'teacher' %}
                                         <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0"
                                             style="width: 40px; height: 40px;"
-                                            data-bs-toggle="modal" data-bs-target="#addPersonModal">
+                                            data-bs-toggle="modal" data-bs-target="#addStudent">
                                         <i class="bi bi-person-plus"></i>
                                         </button>
                                 {% endif %}
                             </div>
                             <hr>
+
+                            <!-- Display Teacher -->
+                            <div class="teacher-list">
+
+                            </div>
                             <div class="people-list">
                                 {% for student in classroom.students.all %}
-                                    <div class="d-flex align-items-center mb-3">
-                                        {% load static %}
-                                        <img src="{% static 'user_avatar.png' %}" alt="{{ student.first_name }} {{ student.last_name }}" class="rounded-circle" width="40">
-                                    </div>
-                                {% empty %}
-                                    <span>No students enrolled yet.</span>
+
                                 {% endfor %}
                             </div>
                         </div>
@@ -494,27 +496,28 @@
     </div>
     {% endif %}
 
-        <!-- Add Student Modal -->
-        <div class="modal fade" id="addPersonModal" tabindex="-1" aria-labelledby="addPersonModalLabel" aria-hidden="true">
+        <!-- Add Student -->
+        <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <!-- Modal Header -->
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addPersonModalLabel">Add Person</h5>
+                        <h5 class="modal-title" id="addStudentLabel">Add Student</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+
                     <!-- Modal Body -->
                     <div class="modal-body">
                         <form method="POST" action="{% url 'add_student' %}" id="addStudentForm">
                             {% csrf_token %}
-                            <input type="hidden" name="classroom_id" id="classroom-id" />
+                            <input type="hidden" name="classroom_id" id="classroom-id" value="" />
                             <div class="mb-3">
                                 {{ add_student.as_p }}
                             </div>
                             <!-- Modal Footer -->
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="addPersonButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
+                                <button type="submit" class="btn btn-primary" id="addStudentButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
                             </div>
                         </form>
                     </div>
@@ -583,7 +586,7 @@
             </div>
         </div>
 
-        <!-- Create Class Modal -->
+        <!-- Create Class -->
         <div class="modal fade" id="createClassModal" tabindex="-2" aria-labelledby="createClassModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -605,7 +608,7 @@
             </div>
         </div>
 
-        <!-- Join Class Modal -->
+        <!-- Join Class -->
         <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -636,7 +639,7 @@
         </div>
     </div>
 
-     <!-- Bootstrap Modal for Logout Confirmation -->
+     <!-- Logout Confirmation -->
     <div class="modal fade" id="logoutModal" tabindex="-2" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -670,7 +673,6 @@
 
     <!-- Bootstrap JS -->
     <script>
-
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
         const menuToggle = document.getElementById('menu-toggle');
@@ -726,49 +728,47 @@
             document.getElementById('class-name').textContent = `${className} (${subject})`;
             document.getElementById('class-section').textContent = `Section: ${section}`;
             document.getElementById('class-join-code').innerHTML = `Class Code: <b>${code}</b>`;
+            document.getElementById('classroom-id').value = id;
 
             // Fetch enrolled students for the People tab
             fetch(`/classroom/${id}/students`)
                 .then(response => response.json())
                 .then(data => {
+                    const teacherList = document.querySelector('.teacher-list');
                     const peopleList = document.querySelector('#people .people-list');
                     peopleList.innerHTML = ''; // Clear existing content
+                    teacherList.innerHTML = '';
 
-                    if (data.students.length > 0) {
+                    // Display teacher information
+                    if (data.teacher) {
+                        const teacher = data.teacher;
+                        const profile = data.current_user === 'teacher' ? '(You)' : '(Instructor)';
+
+                        teacherList.innerHTML += `
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="${teacher.profile_picture_url || defaultAvatar}" alt="${teacher.first_name} ${teacher.last_name}" class="rounded-circle" width="40">
+                                <div class="ms-2">
+                                    <span>${teacher.first_name} ${teacher.last_name}</strong>
+                                    <strong style="color: black;">${profile}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    if (data.students.length) {
                         data.students.forEach(student => {
-                            // Create the dynamic template using spans
-                            const studentDiv = document.createElement('div');
-                            studentDiv.className = 'd-flex align-items-center mb-3';
-
-                            const img = document.createElement('img');
-                            img.alt = `${student.first_name} ${student.last_name}`;
-                            img.className = 'rounded-circle';
-                            img.width = 40;
-
-                            // Use the default avatar if no profile picture is provided
-                            img.src = student.profile_picture_url || defaultAvatar;
-
-                            const span = document.createElement('span');
-                            span.textContent = `${student.first_name} ${student.last_name}`;
-
-                            // Append elements to the student div
-                            studentDiv.appendChild(img);
-                            studentDiv.appendChild(span);
-
-                            // Append student div to the people list
-                            peopleList.appendChild(studentDiv);
+                            peopleList.innerHTML += `
+                                <div class="d-flex align-items-center mb-3">
+                                    <img src="${student.profile_picture_url || defaultAvatar}" alt="${student.first_name} ${student.last_name}" class="rounded-circle" width="40">
+                                    <span>${student.first_name} ${student.last_name}</span>
+                                </div>
+                            `;
                         });
                     } else {
-                        // Show a message if no students are enrolled
-                        const noStudentsMessage = document.createElement('span');
-                        noStudentsMessage.textContent = 'No students enrolled yet.';
-                        noStudentsMessage.className = 'text-muted'; // Optional styling for the message
-                        peopleList.appendChild(noStudentsMessage);
+                        peopleList.innerHTML = '<span class="text-muted">No students enrolled yet.</span>';
                     }
                 })
-                .catch(error => {
-                    console.error('Error fetching students:', error);
-                });
+                .catch(error => console.error('Error fetching students:', error));
         }
 
         function showClassroomCards() {
