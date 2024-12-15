@@ -2,7 +2,7 @@ import random
 import string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
@@ -11,16 +11,45 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom, Profile
 
-def home_view(request):
-    classrooms = []
+#Sign Up View
+def signup_view(request):
+    if request.method == 'POST':
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            form.save()  # Save the user to the database
+            messages.success(request, "Signup successful!")  # Add a success message
+            return redirect('login')  # Redirect to the login page
+    else:
+        form = SignupForm()
+    return render(request, 'Quiz_App/signup.html', {'form': form})
+
+
+# Login view
+def login_view(request):
     if request.user.is_authenticated:
-        # Check user role
-        print(request.user.profile.role)  # Debugging line
-        if request.user.profile.role == 'teacher':
-            classrooms = Classroom.objects.filter(teacher=request.user)
-    return render(request, 'Quiz_App/landing_page.html', {'classrooms': classrooms})
+        return redirect('landing')  # Redirect to landing if already logged in
+
+    if request.method == 'POST':
+        form = CustomAuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            request.session['has_logged_in'] = True  # Set session variable
+            return redirect('landing')
+        else:
+            form.add_error(None, " Invalid username/email or password. ")  # Adjust error message
+    else:
+        form = CustomAuthenticationForm()
+
+    response = render(request, 'Quiz_App/login.html', {'form': form})
+
+    # Prevent caching of the login page
+    response['Cache-Control'] = 'no-store'
+
+    return response
 
 
+# Add Student in a Classroom
 def add_student(request):
     if request.method == "POST":
         form = AddStudentForm(request.POST)
@@ -58,50 +87,45 @@ def add_student(request):
 
     return render(request, 'landing_page.html', {'add_student': form})
 
+# Uneroll student from the classroom
+def unenroll_student(request, classroom_id):
+    # Get the classroom and the current user (student)
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+    user = request.user
 
-def signup_view(request):
-    if request.method == 'POST':
-        form = SignupForm(request.POST)
-        if form.is_valid():
-            user = form.save()  # Save the user to the database
-            messages.success(request, "Signup successful!")  # Add a success message
-            return redirect('login')  # Redirect to the login page
+    if user.profile.role == 'student':
+        # Handle confirmation form submission
+        if request.method == "POST":
+            # Remove the student from the classroom
+            classroom.students.remove(user)
+            messages.success(request, 'You have successfully unenrolled from the classroom.')
+            return redirect('landing')  # Redirect to another page (e.g., landing or classroom list)
+
+        # Render the confirmation page if the method is GET
+        return render(request, 'confirm_unenroll.html', {'classroom': classroom})
+
     else:
-        form = SignupForm()
-    return render(request, 'Quiz_App/signup.html', {'form': form})
+        messages.error(request, 'You are not authorized to unenroll from this classroom.')
+        return HttpResponseForbidden("You are not authorized to unenroll from this classroom.")
+
+#Remove the student from the classroom, Using teacher role.
 
 
-# Login view
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('landing')  # Redirect to landing if already logged in
-
+# Delete Classroom for Teacher Role
+def delete_classroom(request, classroom_id):
+    classroom = get_object_or_404(Classroom, id=classroom_id)
     if request.method == 'POST':
-        form = CustomAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            request.session['has_logged_in'] = True  # Set session variable
-            return redirect('landing')
-        else:
-            form.add_error(None, " Invalid username/email or password. ")  # Adjust error message
+        classroom.delete()
+        messages.success(request, 'Classroom deleted successfully.')
+        return redirect('landing')  # Update this to the name of your classroom list view
     else:
-        form = CustomAuthenticationForm()
-
-    response = render(request, 'Quiz_App/login.html', {'form': form})
-
-    # Prevent caching of the login page
-    response['Cache-Control'] = 'no-store'
-
-    return response
-
+        messages.error(request, 'Invalid request method.')
+        return redirect('landing')  # Update this to the name of your classroom list view
 
 # Profile Management Update in Credentials
 @login_required
 def account_management(request):
     user = request.user
-    profile_form = ProfileForm(instance=user)
-    password_form = PasswordChangeForm()
 
     if request.method == 'POST':
         if 'update_profile' in request.POST:
@@ -109,36 +133,39 @@ def account_management(request):
             if profile_form.is_valid():
                 profile_form.save()
                 messages.success(request, 'Profile updated successfully!')
-                return redirect('landing')
             else:
                 messages.error(request, 'Failed to update profile. Please try again.')
 
         elif 'change_password' in request.POST:
             password_form = PasswordChangeForm(request.POST)
             if password_form.is_valid():
-                if user.check_password(password_form.cleaned_data['current_password']):
-                    user.set_password(password_form.cleaned_data['new_password'])
-                    user.save()
-                    messages.success(request, 'Password updated successfully!')
-                    update_session_auth_hash(request, user)  # Keeps the user logged in
-                    return redirect('landing')
+                current_password = password_form.cleaned_data['current_password']
+                new_password = password_form.cleaned_data['new_password']
+                reenter_password = password_form.cleaned_data['confirm_password']
+
+                # Check if the current password is correct
+                if user.check_password(current_password):
+                    # Check if new password and re-entered password match
+                    if new_password == reenter_password:
+                        user.set_password(new_password)
+                        user.save()
+                        messages.success(request, 'Password updated successfully!')
+                        update_session_auth_hash(request, user)
+                    else:
+                        messages.error(request, 'The new passwords do not match.')
                 else:
-                    messages.error(request, 'Failed to update password. Please try again.')
-                    password_form.add_error('current_password', 'Current password is incorrect.')
+                    messages.error(request, 'Current password is incorrect.')
 
         elif 'delete_account' in request.POST:
-            # Logic for deleting the user's account
             user.delete()
-            logout(request)  # Log the user out after account deletion
+            logout(request)
             messages.success(request, 'Your account has been deleted successfully.')
-            return redirect('landing')  # Redirect to the homepage or another appropriate pag
 
-    context = {
-        'profile_form': profile_form,
-        'password_form': password_form,
-    }
-    return render(request, 'landing_page.html', context)
+    # Redirect to landing if accessed via GET or invalid POST
+    return redirect('landing')
 
+
+# Join Cass View
 def join_class(request):
     if request.method == 'POST':
         form = JoinClassForm(request.POST)
@@ -171,10 +198,12 @@ def join_class(request):
     return render(request, 'landing_page.html', {'form': form})
 
 
+# View for Generate Class Code in Classroom
 def generate_class_code(length=7):
     characters = string.ascii_letters + string.digits  # Letters (both uppercase and lowercase) and digits
     return ''.join(random.choice(characters) for _ in range(length))
 
+# View for Create Class in Teacher Role
 @login_required
 def create_class(request):
     if request.method == 'POST':
@@ -199,7 +228,7 @@ def create_class(request):
                 class_code=class_code  # Save the generated class code
             )
 
-            messages.success(request, f"Class '{class_name}' created successfully with code: {class_code}!")
+            messages.success(request, f"Class '{class_name}' created successfully!")
             return redirect('landing')  # Redirect to your landing page or dashboard
         else:
             messages.error(request, "There was an error creating the class.")
@@ -208,14 +237,6 @@ def create_class(request):
 
     return render(request, 'landing_page.html', {'form': form})
 
-def home(request):
-    # Check if the user is logged in
-    if request.user.is_authenticated:
-        # If the user is logged in, redirect to the landing page
-        return redirect('landing')  # Replace 'landing' with your actual landing page URL name
-    else:
-        # If not logged in, render the home page
-        return render(request, 'home.html')
 
 # Process to get the Students and Teacher in People Tab.
 def get_classroom_students(request, classroom_id):
@@ -245,6 +266,7 @@ def get_classroom_students(request, classroom_id):
 
     except Classroom.DoesNotExist:
         return JsonResponse({"error": "Classroom not found"}, status=404)
+
 
 # Landing page view
 @login_required

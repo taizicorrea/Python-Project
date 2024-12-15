@@ -46,13 +46,13 @@ class SignupForm(forms.ModelForm):
     def clean_username(self):
         username = self.cleaned_data.get('username')
         if User.objects.filter(username=username).exists():
-            raise ValidationError("This username is already taken. Please choose a different one.")
+            raise ValidationError("This username is already taken.")
         return username
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if User.objects.filter(email=email).exists():
-            raise ValidationError("This email address is already in use. Please use a different email.")
+            raise ValidationError("This email address is already in use.")
         return email
 
     def clean(self):
@@ -150,14 +150,6 @@ class PasswordChangeForm(forms.Form):
         label="Confirm New Password"
     )
 
-    def clean(self):
-        cleaned_data = super().clean()
-        new_password = cleaned_data.get('new_password')
-        confirm_password = cleaned_data.get('confirm_password')
-
-        if new_password != confirm_password:
-            raise forms.ValidationError("New password and confirm password do not match.")
-        return cleaned_data
 
 # Jdango Form for Login using the Authentication
 class CustomAuthenticationForm(AuthenticationForm):

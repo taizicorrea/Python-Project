@@ -1,267 +1,35 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BulSU Classroom</title>
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <!-- Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+
+    <!-- Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script><!-- SweetAlert CDN -->
+
+    <!-- Bootstrap JS -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- SweetAlert -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.js"></script>
-    <style>
-        body {
-            background-color: #fff;
-        }
-        .sidebar {
-            min-height: 100vh;
-            background-color: #fff;
-            border-right: 1px solid #dee2e6;
-            padding: 15px 0;
-            transition: width 0.3s;
-            overflow: hidden;
-        }
-        .sidebar.collapsed {
-            width: 80px;
-        }
-        .sidebar.expanded {
-            width: 300px;
-        }
-        .sidebar a {
-            color: #495057;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 10px 20px;
-            font-weight: 500;
-        }
-        .sidebar a:hover, .sidebar a.active {
-            background-color: rgb(223, 236, 252);
-            border-radius: 5px;
-            border-radius: 0 25px 25px 0; /* Active state also includes the rounded left border */
-            margin-right: 10px;
-        }
-
-        .sidebar a:hover{
-            background-color: rgb(248, 248, 248);
-        }
-        .sidebar a i {
-            font-size: 1.2rem;
-            margin-right: 10px;
-        }
-
-        .sidebar.collapsed a i {
-            margin-right: 0;
-        }
-        .sidebar.collapsed a span {
-            display: none;
-        }
-
-        .header {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header img {
-            height: 40px;
-        }
-
-        .header .profile img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-        }
-
-        .main-content {
-            transition: margin-left 0.3s;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .main-content.expanded {
-            margin-left: 250px;
-        }
-
-        .main-content.collapsed {
-            margin-left: 80px;
-        }
-
-        .illustration img {
-            max-width: 200px;
-            margin: auto;
-            display: block;
-        }
-
-        .footer {
-            font-size: 12px;
-            color: #6c757d;
-            text-align: center;
-            padding: 10px;
-            background-color: #ffffff;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .logo{
-            margin-left: 15px;
-        }
-
-        .modal-content {
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            max-height: 90vh;
-        }
-
-        .modal-header {
-        border-bottom: none;
-        padding: 1.5rem;
-        background-color: #f8f9fa;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-         }
-
-        .modal-header h5 {
-            font-size: 1.25rem;
-            margin: 0;
-        }
-
-        #menu-modal {
-            display: flex;
-            padding: 0;
-        }
-
-        .profile-sidebar {
-            width: 250px;
-            background-color: #f1f1f1;
-            padding: 2rem 1rem;
-            border-right: 1px solid #dee2e6;
-        }
-
-        .profile-sidebar a {
-            display: block;
-            font-size: 1rem;
-            color: #333;
-            margin-bottom: 1rem;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .profile-sidebar a.active,
-        .profile-sidebar a:hover {
-            color: #007bff;
-            font-weight: bold;
-        }
-
-        .tab-content {
-            flex-grow: 1;
-            padding: 0.8rem;
-            background-color: #fff;
-        }
-
-        .tab-pane h5 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            font-weight: bold;
-        }
-
-        .tab-pane .form-control {
-            border-radius: 8px;
-        }
-
-        .btn-primary {
-            border-radius: 8px;
-        }
-
-        .profile-image-container {
-            text-align: center;
-        }
-
-        .profile-image-container img {
-            height: 150px;
-            width: 150px;
-            border-radius: 50%;
-        }
-
-        .profile-image-container .upload-btn {
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
-
-        .text-danger {
-            font-size: 0.95rem;
-        }
-
-        .alert {
-            transition: opacity 0.5s ease-out;
-        }
-
-        .content-area {
-            flex-grow: 1;
-            padding: 20px;
-        }
-
-        .banner {
-            height: 150px;
-            background: linear-gradient(135deg, #4caf50, #81c784);
-            border-radius: 15px;
-        }
-
-        .banner {
-            padding: 15px 20px; /* Adjust padding as needed */
-        }
-
-        .banner .btn {
-            margin-bottom: 10px; /* Adds space between back button and text */
-        }
-
-        .card {
-            border-radius: 15px;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: scale(1.05);
-        }
-
-        .tabs-container {
-            margin-top: 20px;
-        }
-
-        .people-list img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .btn-light {
-            background-color: #ffffff;
-            color: #495057;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-light:hover {
-            background-color: #f8f9fa;
-            color: #343a40;
-        }
-    </style>
 </head>
-
 <body>
-
     <!-- Header -->
     <div class="header">
         <div class="d-flex align-items-center">
@@ -270,12 +38,11 @@
             </button>
 
             {% load static %}
-            <img src="{% static 'BulSULogo.png' %}"  href="{% url 'landing' %}" alt="Logo" class="logo">
+            <img src="{% static 'images/BulSULogo.png' %}"  href="{% url 'landing' %}" alt="Logo" class="logo">
             <h5 class="ms-3 mb-0">BulSU Classroom</h5>
         </div>
         <div class="d-flex">
             <!-- Add Icon -->
-
             <!-- Add Button with Dropdown -->
             <div class="dropdown">
                 <button class="btn p-0 border-0 bg-transparent me-3" type="button" id="addDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Add or join a class">
@@ -296,7 +63,7 @@
             <div class="dropdown">
                 <button class="btn p-0 border-0 bg-transparent" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     {% load static %}
-                    <img src="{% static 'user_avatar.png' %}" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px;">
+                    <img src="{% static 'images/user_avatar.png' %}" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px;">
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
                 <li><a class="dropdown-item" data-url="{% url 'profile' %}" data-bs-toggle="modal" data-bs-target="#profileModal"  id="profile-link">Profile</a></li>
@@ -306,49 +73,6 @@
             </div>
         </div>
     </div>
-    {% if messages %}
-        <script type="text/javascript">
-            {% for message in messages %}
-                {% if message.tags == 'success' %}
-                    // Success message
-                    Swal.fire({
-                        icon: 'success',  // Use 'success' to show the checkmark icon
-                        title: '',  // Empty title
-                        text: '{{ message|escapejs }}',  // The message content
-                        showConfirmButton: false,  // No confirm button
-                        position: 'top-end',  // Position the popup at the top-right
-                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
-                        timerProgressBar: true,  // Show a progress bar
-                        toast: true,  // Display as a toast (small notification)
-                        background: '#00a550',  // Green background for success
-                        color: '#fff',  // White text for contrast
-                        iconColor: '#fff',  // White checkmark icon color
-                        customClass: {
-                            popup: 'check-popup',
-                        }
-                    });
-                {% elif message.tags == 'error' %}
-                    // Error message
-                    Swal.fire({
-                        icon: 'error',  // Use 'error' to show the cross icon
-                        title: '',  // Empty title
-                        text: '{{ message|escapejs }}',  // The message content
-                        showConfirmButton: false,  // No confirm button
-                        position: 'top-end',  // Position the popup at the top-right
-                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
-                        timerProgressBar: true,  // Show a progress bar
-                        toast: true,  // Display as a toast (small notification)
-                        background: '#d33',  // Red background for error
-                        color: '#fff',  // White text for contrast
-                        iconColor: '#fff',  // White cross icon color
-                        customClass: {
-                            popup: 'check-popup',
-                        }
-                    });
-                {% endif %}
-            {% endfor %}
-        </script>
-    {% endif %}
 
     <!-- Layout -->
     <div class="d-flex">
@@ -366,7 +90,7 @@
     <div class="container vh-100 d-flex flex-column justify-content-center align-items-center">
         <div class="illustration text-center">
             {% load static %}
-            <img src="{% static 'display.gif' %}" alt="Illustration">
+            <img src="{% static 'images/display.gif' %}" alt="Illustration">
         </div>
         <h5 class="my-4 text-center">Add a class to get started</h5>
         <form method="post" class="w-50 mx-auto">
@@ -396,10 +120,40 @@
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-lg h-100" onclick="openClassroom({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}')">
                             <!-- Card Header -->
-                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4caf50, #81c784);">
-                                <h5 class="card-title mb-0">{{ classroom.class_name }}</h5>
-                                <p class="mb-0">{{ classroom.subject }}</p>
+                            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4caf50, #81c784);">
+                                <div>
+                                    <h5 class="card-title mb-0">{{ classroom.class_name }}</h5>
+                                    <p class="mb-0">{{ classroom.subject }}</p>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-white p-0" type="button" id="dropdownMenuButton{{ classroom.id }}" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end p-0"
+                                        style="font-size: 0.75rem; min-width: 120px;"
+                                        aria-labelledby="dropdownMenuButton{{ classroom.id }}">
+                                        {% if user.profile.role == 'student' %}
+                                            <!-- Only visible to students -->
+                                            <li>
+                                                <form id="unenroll-form" action="{% url 'unenroll_student' classroom.id %}" method="post" onsubmit="return confirmUnenroll()">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Unenroll</button>
+                                                </form>
+                                            </li>
+
+                                        {% elif user.profile.role == 'teacher' %}
+                                            <!-- Only visible to teachers -->
+                                            <li>
+                                                <form method="post" id="delete-form" action="{% url 'delete_classroom' classroom.id %}" onsubmit="return confirmDeleteClass()">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Delete</button>
+                                                </form>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
+
                             <!-- Card Body -->
                             <div class="card-body">
                                 {% if user.profile.role == 'student' %}
@@ -415,6 +169,7 @@
             </div>
         </div>
 
+        </script>
         <div id="classroom-details" style="display: none;">
                 <!-- Banner with Classroom Details -->
                 <div class="banner d-flex flex-column align-items-start px-4 py-3" style="margin-top: -25px;">
@@ -466,23 +221,25 @@
 
                         <!-- People Tab -->
                         <div class="tab-pane fade" id="people">
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <h5 class="mb-0">People</h5>
+                            <h5 class="mt-3 mb-0">Teacher</h5>
+                            <hr>
+                            <div class="teacher-list">
+
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <h5 class="mb-0">Student</h5>
                                 <!-- Add People Icon Button -->
                                 {% if user.profile.role == 'teacher' %}
-                                        <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0"
-                                            style="width: 40px; height: 40px;"
-                                            data-bs-toggle="modal" data-bs-target="#addStudent">
+                                        <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 40px; height: 40px;" data-bs-toggle="modal" data-bs-target="#addStudent">
                                         <i class="bi bi-person-plus"></i>
                                         </button>
                                 {% endif %}
                             </div>
+
                             <hr>
 
                             <!-- Display Teacher -->
-                            <div class="teacher-list">
-
-                            </div>
                             <div class="people-list">
                                 {% for student in classroom.students.all %}
 
@@ -496,55 +253,55 @@
     </div>
     {% endif %}
 
-        <!-- Add Student -->
-        <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <!-- Modal Header -->
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addStudentLabel">Add Student</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
+    <!-- Add Student -->
+    <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addStudentLabel">Add Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
 
-                    <!-- Modal Body -->
-                    <div class="modal-body">
-                        <form method="POST" action="{% url 'add_student' %}" id="addStudentForm">
-                            {% csrf_token %}
-                            <input type="hidden" name="classroom_id" id="classroom-id" value="" />
-                            <div class="mb-3">
-                                {{ add_student.as_p }}
-                            </div>
-                            <!-- Modal Footer -->
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="addStudentButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
-                            </div>
-                        </form>
-                    </div>
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'add_student' %}" id="addStudentForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="classroom_id" id="classroom-id" value="" />
+                        <div class="mb-3">
+                            {{ add_student.email_or_username }}
+                        </div>
+                        <!-- Modal Footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="addStudentButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Modal for Account Management -->
-        <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <!-- Modal Header -->
-                    <div class="modal-header">
-                        <h5>Account Management</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Modal for Account Management -->
+    <div class="modal fade {% if modal_open %}show{% endif %}" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true" {% if modal_open %}style="display: block;"{% endif %}>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5>Account Management</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- Modal Body -->
+                <div class="modal-body" id="menu-modal">
+                    <!-- Profile Sidebar -->
+                    <div class="profile-sidebar">
+                        <a href="#profile" class="active" data-bs-toggle="tab">
+                            <i class="bi bi-person-circle"></i> Profile
+                        </a>
+                        <a href="#security" data-bs-toggle="tab">
+                            <i class="bi bi-shield-lock"></i> Security
+                        </a>
                     </div>
-                    <!-- Modal Body -->
-                    <div class="modal-body" id="menu-modal">
-                        <!-- Profile Sidebar -->
-                        <div class="profile-sidebar">
-                            <a href="#profile" class="active" data-bs-toggle="tab">
-                                <i class="bi bi-person-circle"></i> Profile
-                            </a>
-                            <a href="#security" data-bs-toggle="tab">
-                                <i class="bi bi-shield-lock"></i> Security
-                            </a>
-                        </div>
 
                         <!-- Tab Content -->
                         <div class="tab-content">
@@ -553,7 +310,7 @@
                                 <h5>Profile</h5>
                                 <div class="profile-image-container">
                                     {% load static %}
-                                    <img src="{% static 'user_avatar.png' %}" alt="Profile Picture">
+                                    <img src="{% static 'images/user_avatar.png' %}" alt="Profile Picture">
                                 </div>
                                 <form method="post" action="{% url 'account_management' %}">
                                     {% csrf_token %}
@@ -566,18 +323,20 @@
                             <!-- Security Section -->
                             <div class="tab-pane fade" id="security">
                                 <h5>Password</h5>
-                                <form method="post" action="{% url 'account_management' %}">
+                                <form method="post" action="{% url 'account_management' %}" id="passwordForm">
                                     {% csrf_token %}
                                     {{ password_form.as_p }}
                                     <div class="text-end">
                                         <button type="submit" name="change_password" class="btn btn-primary">Update Password</button>
                                     </div>
                                 </form>
+
                                 <h6 class="text-danger">Delete Account</h6>
                                 <p class="text-danger">Deleting your account will permanently erase all data. This action cannot be undone.</p>
-                                <form method="POST" action="{% url 'account_management' %}">
+                                <form method="POST" action="{% url 'account_management' %}" id="deleteAccountForm">
                                     {% csrf_token %}
-                                    <button type="submit" name="delete_account" class="btn btn-danger">Delete Account</button>
+                                      <input type="hidden" name="delete_account" value="{{ user.id }}">
+                                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Account</button>
                                 </form>
                             </div>
                         </div>
@@ -640,7 +399,7 @@
     </div>
 
      <!-- Logout Confirmation -->
-    <div class="modal fade" id="logoutModal" tabindex="-2" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal fade" id="logoutModal" tabindex="-4" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -661,6 +420,50 @@
         </div>
     </div>
 
+    {% if messages %}
+        <script type="text/javascript">
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    // Success message
+                    Swal.fire({
+                        icon: 'success',  // Use 'success' to show the checkmark icon
+                        title: '',  // Empty title
+                        text: '{{ message|escapejs }}',  // The message content
+                        showConfirmButton: false,  // No confirm button
+                        position: 'top-end',  // Position the popup at the top-right
+                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
+                        timerProgressBar: true,  // Show a progress bar
+                        toast: true,  // Display as a toast (small notification)
+                        background: '#00a550',  // Green background for success
+                        color: '#fff',  // White text for contrast
+                        iconColor: '#fff',  // White checkmark icon color
+                        customClass: {
+                            popup: 'check-popup',
+                        }
+                    });
+                {% elif message.tags == 'error' %}
+                    // Error message
+                    Swal.fire({
+                        icon: 'error',  // Use 'error' to show the cross icon
+                        title: '',  // Empty title
+                        text: '{{ message|escapejs }}',  // The message content
+                        showConfirmButton: false,  // No confirm button
+                        position: 'top-end',  // Position the popup at the top-right
+                        timer: 3000,  // Auto-close after 3 seconds (adjustable)
+                        timerProgressBar: true,  // Show a progress bar
+                        toast: true,  // Display as a toast (small notification)
+                        background: '#d33',  // Red background for error
+                        color: '#fff',  // White text for contrast
+                        iconColor: '#fff',  // White cross icon color
+                        customClass: {
+                            popup: 'check-popup',
+                        }
+                    });
+                {% endif %}
+            {% endfor %}
+        </script>
+    {% endif %}
+
     <!-- Footer -->
     <div class="footer">
         <p>Don't see your classes? Try another account</p>
@@ -668,118 +471,12 @@
 
     {% load static %}
     <script type="text/javascript">
-        const defaultAvatar = "{% static 'user_avatar.png' %}";
+        const defaultAvatar = "{% static 'images/user_avatar.png' %}";
     </script>
 
-    <!-- Bootstrap JS -->
-    <script>
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('main-content');
-        const menuToggle = document.getElementById('menu-toggle');
 
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            sidebar.classList.toggle('expanded');
-            mainContent.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-        });
+    <script src="{% static 'js/landing.js' %}"></script>
 
-
-        // Initialize tooltips
-        document.addEventListener('DOMContentLoaded', () => {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach((tooltipTriggerEl) => {
-                new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Handle tab switching
-            const tabLinks = document.querySelectorAll('.profile-sidebar a[data-bs-toggle="tab"]');
-
-            tabLinks.forEach(tabLink => {
-                tabLink.addEventListener('click', event => {
-                    event.preventDefault();
-
-                    // Remove active class from all sidebar links
-                    tabLinks.forEach(link => link.classList.remove('active'));
-
-                    // Add active class to the clicked link
-                    tabLink.classList.add('active');
-
-                    // Switch the tab content
-                    const target = document.querySelector(tabLink.getAttribute('href'));
-                    const activeTabs = document.querySelectorAll('.tab-pane.active');
-                    activeTabs.forEach(tab => tab.classList.remove('active', 'show'));
-                    target.classList.add('active', 'show');
-                });
-            });
-        });
-
-        function openClassroom(id, section, className, subject, code) {
-            // Hide classroom cards
-            document.getElementById('classroom-cards').style.display = 'none';
-
-            // Show classroom details
-            const classroomDetails = document.getElementById('classroom-details');
-            classroomDetails.style.display = 'block';
-
-            // Update classroom details dynamically
-            document.getElementById('class-name').textContent = `${className} (${subject})`;
-            document.getElementById('class-section').textContent = `Section: ${section}`;
-            document.getElementById('class-join-code').innerHTML = `Class Code: <b>${code}</b>`;
-            document.getElementById('classroom-id').value = id;
-
-            // Fetch enrolled students for the People tab
-            fetch(`/classroom/${id}/students`)
-                .then(response => response.json())
-                .then(data => {
-                    const teacherList = document.querySelector('.teacher-list');
-                    const peopleList = document.querySelector('#people .people-list');
-                    peopleList.innerHTML = ''; // Clear existing content
-                    teacherList.innerHTML = '';
-
-                    // Display teacher information
-                    if (data.teacher) {
-                        const teacher = data.teacher;
-                        const profile = data.current_user === 'teacher' ? '(You)' : '(Instructor)';
-
-                        teacherList.innerHTML += `
-                            <div class="d-flex align-items-center mb-3">
-                                <img src="${teacher.profile_picture_url || defaultAvatar}" alt="${teacher.first_name} ${teacher.last_name}" class="rounded-circle" width="40">
-                                <div class="ms-2">
-                                    <span>${teacher.first_name} ${teacher.last_name}</strong>
-                                    <strong style="color: black;">${profile}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    if (data.students.length) {
-                        data.students.forEach(student => {
-                            peopleList.innerHTML += `
-                                <div class="d-flex align-items-center mb-3">
-                                    <img src="${student.profile_picture_url || defaultAvatar}" alt="${student.first_name} ${student.last_name}" class="rounded-circle" width="40">
-                                    <span>${student.first_name} ${student.last_name}</span>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        peopleList.innerHTML = '<span class="text-muted">No students enrolled yet.</span>';
-                    }
-                })
-                .catch(error => console.error('Error fetching students:', error));
-        }
-
-        function showClassroomCards() {
-            // Show classroom cards
-            document.getElementById('classroom-cards').style.display = 'flex';
-
-            // Hide classroom details
-            document.getElementById('classroom-details').style.display = 'none';
-        }
-
-    </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
