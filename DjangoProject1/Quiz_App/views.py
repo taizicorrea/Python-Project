@@ -9,7 +9,7 @@ from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateCl
     PasswordChangeForm, AddStudentForm
 from django.contrib.auth import logout
 from django.contrib import messages
-from .models import Classroom, Profile
+from .models import Classroom
 
 #Sign Up View
 def signup_view(request):
@@ -109,9 +109,6 @@ def unenroll_student(request, classroom_id):
         return HttpResponseForbidden("You are not authorized to unenroll from this classroom.")
 
 #Remove the student from the classroom, Using teacher role.
-
-
-# Delete Classroom for Teacher Role
 def delete_classroom(request, classroom_id):
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if request.method == 'POST':

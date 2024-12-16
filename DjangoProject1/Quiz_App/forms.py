@@ -135,6 +135,7 @@ class CreateClassForm(forms.Form):
         'placeholder': 'Enter room'
     }))
 
+
 # Change Password Forms.
 class PasswordChangeForm(forms.Form):
     current_password = forms.CharField(

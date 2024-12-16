@@ -116,7 +116,7 @@ function openClassroom(id, section, className, subject, code) {
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-sm">
                                     <li>
-                                        <a class="dropdown-item"">
+                                        <a class="dropdown-item">
                                             Remove
                                         </a>
                                     </li>
@@ -124,6 +124,7 @@ function openClassroom(id, section, className, subject, code) {
                             </div>
                         </div>
                     `;
+                   peopleList.appendChild(studentElement);
                 });
             } else {
                 peopleList.innerHTML = '<span class="text-muted">No students enrolled yet.</span>';
