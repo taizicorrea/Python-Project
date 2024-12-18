@@ -252,15 +252,21 @@
                         <hr>
                         <p>{{ selected_classroom.teacher.first_name }} {{ selected_classroom.teacher.last_name }}</p>
 
+                        <!-- Students Section -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <h5 class="mb-0">Students</h5>
                             {% if user.profile.role == 'teacher' %}
-                            <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 40px; height: 40px;" data-bs-toggle="modal" data-bs-target="#addStudent">
-                                <i class="bi bi-person-plus"></i>
-                            </button>
+                                <!-- Add Student Button -->
+                                <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0"
+                                        style="width: 40px; height: 40px;"
+                                        data-bs-toggle="modal" data-bs-target="#addStudent"
+                                        onclick="setClassroomId('{{ selected_classroom.id }}')">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
                             {% endif %}
                         </div>
                         <hr>
+                        <!-- Students List -->
                         <ul>
                             {% for student in selected_classroom.students.all %}
                                 <li>{{ student.first_name }} {{ student.last_name }}</li>
@@ -275,34 +281,34 @@
         {% endif %}
 
 
-    <!-- Add Student -->
+    <!-- Add Student Modal -->
     <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <!-- Modal Header -->
                 <div class="modal-header">
                     <h5 class="modal-title" id="addStudentLabel">Add Student</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-
-                <!-- Modal Body -->
                 <div class="modal-body">
                     <form method="POST" action="{% url 'add_student' %}" id="addStudentForm">
                         {% csrf_token %}
-                        <input type="hidden" name="classroom_id" id="classroom-id" value="" />
+                        <!-- Hidden input to pass the classroom ID -->
+                        <input type="hidden" name="classroom_id" id="classroom-id" value="">
+
                         <div class="mb-3">
                             {{ add_student.email_or_username }}
                         </div>
-                        <!-- Modal Footer -->
+
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="addStudentButton" onclick="setClassroomId('{{ classroom.id }}')">Add</button>
+                            <button type="submit" class="btn btn-primary">Add</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- Modal for Account Management -->
     <div class="modal fade {% if modal_open %}show{% endif %}" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true" {% if modal_open %}style="display: block;"{% endif %}>
@@ -513,6 +519,17 @@
 
     <script type="text/javascript">
         const defaultAvatar = "{% static 'images/user_avatar.png' %}";
+
+        function setClassroomId(classroomId) {
+            document.getElementById('classroom-id').value = classroomId;
+        }
+
+                function setClassroomId(classroomId) {
+            // Debug: Log the value to ensure it is being passed
+            console.log("Classroom ID set to: ", classroomId);
+
+            document.getElementById('classroom-id').value = classroomId;
+        }
 
         function navigateToClassroom(classroomId) {
             // Navigate and refresh to load the classroom page
