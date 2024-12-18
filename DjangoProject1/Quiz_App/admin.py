@@ -1,7 +1,40 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 from django.contrib.auth.models import User
-from .models import Profile, Classroom
+from .models import Profile, Classroom, Quiz, Question
+
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ('question_text', 'question_type', 'options_display', 'correct_answers_display')
+    list_filter = ('question_type',)
+    search_fields = ('question_text', 'correct_answers')
+
+    def options_display(self, obj):
+        """Display options as a comma-separated list."""
+        return ", ".join(obj.options_as_list()) if obj.options_as_list() else "-"
+    options_display.short_description = 'Options'
+
+    def correct_answers_display(self, obj):
+        """Display correct answers as a comma-separated list."""
+        return ", ".join(obj.correct_answers_as_list()) if obj.correct_answers_as_list() else "-"
+    correct_answers_display.short_description = 'Correct Answers'
+
+
+@admin.register(Quiz)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ('quiz_display', 'classroom_display', 'quiz_type', 'due_date', 'created_at')
+    list_filter = ('quiz_type', 'due_date')
+    search_fields = ('title', 'classroom__class_name')
+
+    def quiz_display(self, obj):
+        return f"quiz{obj.id}Id - {obj.title}"
+    quiz_display.short_description = "Quiz"
+
+    def classroom_display(self, obj):
+        return f"classroom{obj.classroom.id}Id - {obj.classroom.class_name}"
+    classroom_display.short_description = "Classroom"
 
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):
@@ -44,4 +77,6 @@ class UserAdmin(DefaultUserAdmin):
 # Re-register UserAdmin
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+
 

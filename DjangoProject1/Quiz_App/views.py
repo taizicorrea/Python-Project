@@ -1,51 +1,58 @@
 import random
+import json
 import string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
-from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
-    PasswordChangeForm, AddStudentForm
+from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
+    PasswordChangeForm, AddStudentForm, QuestionForm
 from django.contrib.auth import logout
 from django.contrib import messages
-from .models import Classroom
+from .models import Classroom, Quiz, Question
+
+
 
 #Sign Up View
 def signup_view(request):
     if request.method == 'POST':
         form = SignupForm(request.POST)
         if form.is_valid():
-            form.save()  # Save the user to the database
-            messages.success(request, "Signup successful!")  # Add a success message
-            return redirect('login')  # Redirect to the login page
+            user = form.save()
+            login(request, user)  # Automatically log in the user
+            messages.success(request, "Signup successful! Welcome!")
+            return redirect('landing')  # Redirect to landing page
     else:
         form = SignupForm()
     return render(request, 'Quiz_App/signup.html', {'form': form})
 
 
+
 # Login view
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('landing')  # Redirect to landing if already logged in
+        return redirect('landing')  # Already logged in
 
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            request.session['has_logged_in'] = True  # Set session variable
-            return redirect('landing')
+            request.session['has_logged_in'] = True
+
+            # Check if the user is a superuser (admin)
+            if user.is_superuser:
+                return redirect('/admin/')  # Redirect admin to Django admin panel
+            else:
+                return redirect('landing')  # Redirect normal users to landing page
         else:
-            form.add_error(None, " Invalid username/email or password. ")  # Adjust error message
+            form.add_error(None, "Invalid username/email or password.")
     else:
         form = CustomAuthenticationForm()
 
     response = render(request, 'Quiz_App/login.html', {'form': form})
-
-    # Prevent caching of the login page
     response['Cache-Control'] = 'no-store'
-
     return response
 
 
@@ -175,24 +182,25 @@ def join_class(request):
 
                 # Check if the user is already enrolled in the classroom
                 if request.user in classroom.students.all():
-                    messages.error(request, "You are already enrolled in this classroom.")
-                    return redirect('landing')  # Redirect back to the landing page (or wherever you want)
+                    messages.warning(request, "You are already enrolled in this classroom.")
+                else:
+                    # Add the user to the students list
+                    classroom.students.add(request.user)
+                    messages.success(request, f"You have successfully joined the class: {classroom.class_name}")
 
-                # Add the user to the students list
-                classroom.students.add(request.user)
-                messages.success(request,
-                                 f"You have successfully joined the class: {classroom.class_name}")  # Use class_name instead of class_code
-                return redirect('landing')  # Redirect to the desired page
+                return redirect('landing')  # Redirect to landing page or classroom list
 
             except Classroom.DoesNotExist:
-                messages.error(request, "Invalid class code.")
-                return redirect('landing')  # Redirect back if class code is invalid
+                messages.error(request, "Invalid class code. Please try again.")
+
         else:
-            messages.error(request, "Invalid form submission.")
-            return redirect('landing')  # Redirect back if the form is not valid
+            messages.error(request, "Invalid input. Please ensure the class code is correct.")
+
+        return redirect('landing') # Redirect back to the form page for retry
+
     else:
-        form = JoinClassForm()  # Empty form for GET request
-    return render(request, 'landing_page.html', {'form': form})
+        form = JoinClassForm()
+    return render(request, 'Quiz_App/landing_page.html', {'form': form})
 
 
 # View for Generate Class Code in Classroom
@@ -269,13 +277,18 @@ def get_classroom_students(request, classroom_id):
 @login_required
 def landing_page(request):
     classrooms = []
+    quizzes = []
     selected_classroom = None
 
     if request.user.is_authenticated:
+        # Fetch classrooms based on user's role
         if request.user.profile.role == 'teacher':
             classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
         elif request.user.profile.role == 'student':
             classrooms = request.user.classrooms.all().prefetch_related('students')
+
+        # Fetch quizzes related to these classrooms
+        quizzes = Quiz.objects.filter(classroom__in=classrooms).order_by('due_date')
 
     # Check if a classroom ID is provided to show its details
     classroom_id = request.GET.get('classroom_id')
@@ -290,12 +303,13 @@ def landing_page(request):
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
+        'quizzes': quizzes,  # Pass quizzes to the template
         'join_form': join_form,
         'create_form': create_form,
         'profile_form': profile_form,
         'password_form': password_form,
         'add_student': add_student,
-        'selected_classroom': selected_classroom,  # Pass selected classroom to template
+        'selected_classroom': selected_classroom,
     })
 
 
@@ -312,3 +326,90 @@ def logout_view(request):
 
 def profile_view(request):
     return render(request, 'landing_page.html')
+
+
+@login_required
+def create_quiz(request, classroom_id):
+    """
+    View to create a quiz with associated questions.
+    Restricted to teachers only.
+    """
+    # Restrict access to teachers
+    if request.user.profile.role != 'teacher':
+        messages.error(request, "You are not authorized to create a quiz.")
+        return redirect('landing')  # Redirect unauthorized users
+
+    # Fetch the classroom
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+
+    if request.method == 'POST':
+        form = QuizForm(request.POST)
+
+        try:
+            # Parse questions data from JSON
+            questions_data = json.loads(request.POST.get('questions', '[]'))
+        except json.JSONDecodeError:
+            messages.error(request, "Invalid questions data format.")
+            return redirect('create_quiz', classroom_id=classroom.id)
+
+        if form.is_valid():
+            # Save the Quiz instance
+            quiz = form.save(commit=False)
+            quiz.classroom = classroom
+            quiz.save()
+
+            # Save Questions
+            for question in questions_data:
+                if not all(key in question for key in ['questionText', 'correctAnswer']):
+                    messages.error(request, "Missing required fields in question data.")
+                    return redirect('create_quiz', classroom_id=classroom.id)
+
+                Question.objects.create(
+                    quiz=quiz,
+                    question_text=question['questionText'],
+                    question_type=form.cleaned_data['quiz_type'],  # Use quiz_type from the form
+                    multiple_choice_options="\n".join(question.get('options', [])),
+                    correct_answers=question.get('correctAnswer', '')
+                )
+
+            messages.success(request, "Quiz and questions created successfully!")
+            return redirect('landing')
+
+        else:
+            messages.error(request, "Please correct the errors in the form.")
+
+    else:
+        form = QuizForm()
+
+    return render(request, 'Quiz_App/create_quiz.html', {'form': form, 'classroom': classroom})
+
+
+@login_required
+def fetch_reusable_questions(request):
+    """
+    Fetches all existing questions for reuse.
+    Returns the data as JSON to be used in the front-end.
+    """
+    if request.method == 'GET':
+        questions = list(Question.objects.values('id', 'question_text', 'question_type', 'correct_answer'))
+        return JsonResponse({'questions': questions})
+
+
+@login_required
+def reset_quiz_session(request):
+    """
+    Resets the session data for a quiz under creation.
+    """
+    if 'quiz_data' in request.session:
+        del request.session['quiz_data']
+    messages.success(request, "Quiz session reset successfully.")
+    return redirect('create_quiz', classroom_id=request.GET.get('classroom_id'))
+
+@login_required
+def add_question(request):
+    """
+    Fetch existing questions from the database for reuse.
+    """
+    if request.method == 'GET':
+        questions = list(Question.objects.values('id', 'question_text', 'question_type'))
+        return JsonResponse({'questions': questions})

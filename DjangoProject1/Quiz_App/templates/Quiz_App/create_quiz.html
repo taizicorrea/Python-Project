@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Quiz{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Back Button -->
+    <a href="{% url 'landing' %}" class="btn btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left"></i> Back to Classroom
+    </a>
+
+    <!-- Classroom Banner -->
+    <div class="p-4 text-white rounded-3 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4caf50, #81c784);">
+        <h4 class="mb-1">{{ classroom.class_name }} ({{ classroom.section }})</h4>
+    </div>
+
+    <!-- Create Quiz Card -->
+    <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Create a New Quiz</h5>
+        </div>
+        <div class="card-body">
+            <!-- Quiz Form -->
+            <form method="post" id="quizForm" class="row g-3">
+                {% csrf_token %}
+                <!-- Title Field -->
+                <div class="col-12">
+                    <label for="title" class="form-label fw-semibold">Title</label>
+                    {{ form.title }}
+                </div>
+                <!-- Quiz Type Field -->
+                <div class="col-md-6">
+                    <label for="quiz_type" class="form-label fw-semibold">Quiz Type</label>
+                    {{ form.quiz_type }}
+                </div>
+                <!-- Due Date Field -->
+                <div class="col-md-6">
+                    <label for="due_date" class="form-label fw-semibold">Due Date</label>
+                    <input type="datetime-local" id="due_date" name="due_date" class="form-control" required>
+                </div>
+                <!-- Description Field -->
+                <div class="col-12">
+                    <label for="description" class="form-label fw-semibold">Description</label>
+                    {{ form.description }}
+                </div>
+
+                <!-- Add Question Button -->
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+                        Add Question
+                    </button>
+                </div>
+
+                <!-- Questions Preview -->
+                <div class="col-12 mt-3">
+                    <h5>Questions Added:</h5>
+                    <ul id="questionsList" class="list-group"></ul>
+                </div>
+
+                <!-- Submit and Cancel Buttons -->
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="{% url 'landing' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-success px-4">Create Quiz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addQuestionModalLabel">Add Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Add Question Form -->
+                <form id="addQuestionForm">
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label">Question Text</label>
+                        <input type="text" id="question_text" class="form-control" placeholder="Enter question text">
+                    </div>
+
+                    <!-- Multiple Choice Options -->
+                    <div class="mb-3" id="optionsContainer">
+                        <!-- Options will be added here -->
+                        <div class="d-flex mb-2">
+                            <input type="text" class="form-control me-2 option-input" placeholder="Enter option">
+                            <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">Add Option</button>
+
+                    <!-- Correct Answer -->
+                    <div class="mb-3">
+                        <label for="answer" class="form-label">Correct Answer</label>
+                        <input type="text" id="answer" class="form-control" placeholder="Enter correct answer">
+                    </div>
+
+                    <div class="text-end">
+                        <button type="button" class="btn btn-success" id="saveQuestionBtn">Add Question</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Adding Questions Dynamically -->
+<script>
+    const quizTypeSelect = document.getElementById('quiz_type');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const addOptionBtn = document.getElementById('addOptionBtn');
+    const saveQuestionBtn = document.getElementById('saveQuestionBtn');
+    const questionTextInput = document.getElementById('question_text');
+    const answerInput = document.getElementById('answer');
+    const questionsList = document.getElementById('questionsList');
+
+    let questions = [];
+
+    // Add Option Button Logic
+    addOptionBtn.addEventListener('click', () => {
+        const optionWrapper = document.createElement('div');
+        optionWrapper.classList.add('d-flex', 'mb-2');
+        optionWrapper.innerHTML = `
+            <input type="text" class="form-control me-2 option-input" placeholder="Enter option">
+            <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
+        `;
+        optionsContainer.appendChild(optionWrapper);
+
+        // Remove option logic
+        optionWrapper.querySelector('.removeOption').addEventListener('click', () => {
+            optionWrapper.remove();
+        });
+    });
+
+    // Restrict options based on quiz type
+    quizTypeSelect.addEventListener('change', () => {
+        const selectedQuizType = quizTypeSelect.value;
+
+        if (selectedQuizType === 'true_false') {
+            // True/False: Only two options - True or False
+            optionsContainer.innerHTML = `
+                <div class="d-flex mb-2">
+                    <input type="text" class="form-control me-2 option-input" value="True" readonly>
+                    <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
+                </div>
+                <div class="d-flex mb-2">
+                    <input type="text" class="form-control me-2 option-input" value="False" readonly>
+                    <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
+                </div>
+            `;
+            addOptionBtn.style.display = 'none'; // Hide Add Option button for True/False
+        } else if (selectedQuizType === 'identification') {
+            // Identification: No options, just an answer field
+            optionsContainer.innerHTML = '';
+            addOptionBtn.style.display = 'none'; // Hide Add Option button for Identification
+        } else {
+            // For other quiz types (Multiple Choice, etc.), allow options
+            optionsContainer.innerHTML = `
+                <div class="d-flex mb-2">
+                    <input type="text" class="form-control me-2 option-input" placeholder="Enter option">
+                    <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
+                </div>
+            `;
+            addOptionBtn.style.display = 'inline-block'; // Show Add Option button
+        }
+    });
+
+    // Save Question Logic
+    saveQuestionBtn.addEventListener('click', () => {
+        const questionText = questionTextInput.value.trim();
+        const options = Array.from(document.querySelectorAll('.option-input'))
+            .map(input => input.value.trim())
+            .filter(option => option !== '');
+        const correctAnswer = answerInput.value.trim();
+
+        if (questionText && correctAnswer) {
+            const listItem = document.createElement('li');
+            listItem.classList.add('list-group-item');
+            listItem.textContent = options.length
+                ? `${questionText} (Options: ${options.join(", ")}, Answer: ${correctAnswer})`
+                : `${questionText} (Answer: ${correctAnswer})`;
+            questionsList.appendChild(listItem);
+
+            // Store in the questions array
+            questions.push({ questionText, options, correctAnswer });
+
+            // Reset form fields
+            questionTextInput.value = '';
+            answerInput.value = '';
+            optionsContainer.innerHTML = ''; // Clear all added options
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
+            modal.hide();
+        } else {
+            alert("Please enter both the question text and correct answer.");
+        }
+    });
+
+    // Add questions to the form on submission
+document.getElementById('quizForm').addEventListener('submit', (e) => {
+    if (questions.length === 0) {
+        e.preventDefault();
+        alert("Please add at least one question before submitting the quiz.");
+        return;
+    }
+    const hiddenField = document.createElement('input');
+    hiddenField.type = 'hidden';
+    hiddenField.name = 'questions';
+    hiddenField.value = JSON.stringify(questions); // Convert questions to JSON
+    document.getElementById('quizForm').appendChild(hiddenField);
+});
+</script>
+
+{% endblock %}

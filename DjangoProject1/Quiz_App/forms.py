@@ -3,39 +3,40 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Profile
+from .models import Quiz
 
 class SignupForm(forms.ModelForm):
     first_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your first name', 'aria-label': 'First Name'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your first name'})
     )
     last_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your last name', 'aria-label': 'Last Name'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your last name'})
     )
     username = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your username', 'aria-label': 'Username'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your username'})
     )
     email = forms.EmailField(
         max_length=254,
         required=True,
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email', 'aria-label': 'Email'})
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email'})
     )
     role = forms.ChoiceField(
         choices=[('', 'Select your role'), ('student', 'Student'), ('teacher', 'Teacher')],
         required=True,
-        widget=forms.Select(attrs={'class': 'form-select', 'aria-label': 'Role'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter your password', 'aria-label': 'Password'}),
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter your password'}),
         required=True
     )
     reenter_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Re-enter your password', 'aria-label': 'Re-enter Password'}),
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Re-enter your password'}),
         required=True
     )
 
@@ -62,21 +63,17 @@ class SignupForm(forms.ModelForm):
 
         if password and reenter_password and password != reenter_password:
             raise ValidationError("Passwords do not match.")
-
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])  # Hash the password
+        user.set_password(self.cleaned_data['password'])  # Hash password
         if commit:
             user.save()
-            # Save the Profile with the selected role
+            # Create a Profile with role selection
             role = self.cleaned_data['role']
             Profile.objects.create(user=user, role=role)
-            user_id = user.id  # Access the primary key of the user
-            print("User ID:", user_id)  # You can log it or use it as needed
         return user
-
 
 class JoinClassForm(forms.Form):
     class_code = forms.CharField(
@@ -171,3 +168,81 @@ class CustomAuthenticationForm(AuthenticationForm):
         }),
     )
 
+class QuizForm(forms.ModelForm):
+    class Meta:
+        model = Quiz
+        fields = ['title', 'quiz_type', 'due_date', 'description']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'title',
+                'placeholder': 'Enter Quiz Title'
+            }),
+            'quiz_type': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'quiz_type'
+            }),
+            'due_date': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'id': 'due_date',
+                'placeholder': 'dd/mm/yyyy --:--'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'id': 'description',
+                'rows': 4,
+                'placeholder': 'Enter Quiz Description'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(QuizForm, self).__init__(*args, **kwargs)
+        # Explicitly set choices without any placeholder option
+        self.fields['quiz_type'].choices = [
+            ('multiple_choice', 'Multiple Choice'),
+            ('true_false', 'True/False'),
+            ('identification', 'Identification'),
+        ]
+        self.fields['quiz_type'].required = True  # Ensure the field is required
+
+class QuestionForm(forms.Form):
+    question_text = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter question text'
+        }),
+        required=True
+    )
+    multiple_choice_options = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Option 1\nOption 2\nOption 3',
+            'rows': 3
+        }),
+        required=False
+    )
+    answer = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter correct answer'
+        }),
+        required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        quiz_type = kwargs.pop('quiz_type', None)  # Dynamically pass 'quiz_type'
+        super().__init__(*args, **kwargs)
+
+        # Adjust form fields based on the quiz type
+        if quiz_type == 'multiple_choice':
+            self.fields['multiple_choice_options'].required = True
+            self.fields['answer'].widget.attrs['placeholder'] = 'Enter correct option number'
+        elif quiz_type == 'true_false':
+            self.fields['multiple_choice_options'].widget = forms.HiddenInput()  # Hide options
+            self.fields['answer'] = forms.ChoiceField(
+                choices=[('True', 'True'), ('False', 'False')],
+                widget=forms.Select(attrs={'class': 'form-select'})
+            )
+        elif quiz_type == 'identification':
+            self.fields['multiple_choice_options'].widget = forms.HiddenInput()  # Hide options
+            self.fields['answer'].widget.attrs['placeholder'] = 'Enter correct answer'
