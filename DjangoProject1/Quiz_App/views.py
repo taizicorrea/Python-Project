@@ -5,8 +5,11 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
 from .forms import CustomAuthenticationForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
-    PasswordChangeForm, AddStudentForm
+    PasswordChangeForm, AddStudentForm, EditClassroomForm
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom
@@ -47,7 +50,6 @@ def login_view(request):
     response['Cache-Control'] = 'no-store'
 
     return response
-
 
 # Add Student in a Classroom
 def add_student(request):
@@ -264,6 +266,29 @@ def get_classroom_students(request, classroom_id):
     except Classroom.DoesNotExist:
         return JsonResponse({"error": "Classroom not found"}, status=404)
 
+# Edit Classroom in Details
+def edit_classroom(request):
+    if request.method == 'POST':
+        classroom_id = request.POST.get('modal-classroom-id')  # Get the classroom ID from the hidden field
+        classroom = get_object_or_404(Classroom, id=classroom_id)  # Get the classroom instance
+        form = EditClassroomForm(request.POST, instance=classroom)  # Populate form with data
+
+        if form.is_valid():
+            form.save()  # Save the updated classroom
+            messages.success(request, 'Classroom updated successfully!')
+            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+        else:
+            # If there are form errors, print them (optional) and show an error message
+            print(form.errors)  # Optional: for debugging form errors
+            messages.error(request, 'There was an error updating the classroom.')
+            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+    else:
+        # If it's a GET request, display the form
+        form = EditClassroomForm()
+
+    return render(request, 'Quiz_App/landing_page.html', {
+        'form': form,
+    })
 
 # Landing page view
 @login_required
@@ -282,11 +307,17 @@ def landing_page(request):
     if classroom_id:
         selected_classroom = get_object_or_404(Classroom, id=classroom_id)
 
+    # Check if a classroom ID is provided to show its details
+    classroom_id = request.GET.get('classroom_id')
+    if classroom_id:
+        selected_classroom = get_object_or_404(Classroom, id=classroom_id)
+
     join_form = JoinClassForm()
     create_form = CreateClassForm()
     profile_form = ProfileForm(instance=request.user)
     password_form = PasswordChangeForm()
     add_student = AddStudentForm()
+    edit_classroom = EditClassroomForm()
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
@@ -296,6 +327,7 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
         'selected_classroom': selected_classroom,  # Pass selected classroom to template
+        'edit_classroom': edit_classroom,
     })
 
 

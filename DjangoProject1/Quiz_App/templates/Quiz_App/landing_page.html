@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.js"></script>
 </head>
+
 <body>
     <!-- Header -->
     <div class="header">
@@ -37,7 +38,9 @@
             <i class="bi bi-list fs-4" id="menu-icon"></i>
             </button>
 
-            <img src="{% static 'images/BulSULogo.png' %}"  href="{% url 'landing' %}" alt="Logo" class="logo">
+            <a href="{% url 'landing' %}">
+                <img src="{% static 'images/BulSULogo.png' %}" alt="Logo" class="logo">
+            </a>
             <h5 class="ms-3 mb-0">BulSU Classroom</h5>
         </div>
         <div class="d-flex">
@@ -112,10 +115,10 @@
     {% if classrooms %}
     <div class="container">
         <div class="content-area">
-            <div id="classroom-cards" class="row g-4">
+            <div id="classroom-cards" class="row g-4" >
                 {% for classroom in classrooms %}
                     <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-lg h-100" onclick="openClassroom({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}')">
+                        <div class="card shadow-lg h-100" onclick="openClassroom({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}', '{{ classroom.room }}')">
                             <!-- Card Header -->
                             <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4caf50, #81c784);">
                                 <div>
@@ -144,6 +147,7 @@
                                                 <form method="post" id="delete-form" action="{% url 'delete_classroom' classroom.id %}" onsubmit="return confirmDeleteClass()">
                                                     {% csrf_token %}
                                                     <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Delete</button>
+                                                    <button type="button" class="dropdown-item px-3 py-2" style="color: black;" data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Classroom" onclick="event.stopPropagation(); openEdit({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}', '{{ classroom.room }}')">Edit</button>
                                                 </form>
                                             </li>
                                         {% endif %}
@@ -180,10 +184,6 @@
                             <p id="class-section" class="mb-1" style=""></p>
                             <p id="class-join-code" class="mb-0"></p>
                         </div>
-                        <!-- Edit Button aligned to the right edge -->
-                        <span class="ms-auto" data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Classroom" style="cursor: pointer; position: relative; top: -65px;">
-                            <i class="bi bi-pencil"></i>
-                        </span>
                     </div>
                 </div>
 
@@ -383,17 +383,20 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="POST">
+                        <form method="POST" action="{% url 'edit_classroom' %}" id="editClassForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="modal-classroom-id" name="modal-classroom-id" >
+                            <p><strong>Classroom ID:</strong> <span id="display-classroom-id"></span></p>
+                            {{ edit_classroom.as_p }}
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Save Changes</button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
-
 
         <!-- Join Class -->
         <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">

@@ -1,4 +1,3 @@
-
 function confirmDeleteClass() {
     // Display a confirmation dialog to the user
     const userConfirmed = confirm("Are you sure you want to delete the classroom?");
@@ -24,7 +23,6 @@ function confirmUnenroll() {
     // If the user clicked "Cancel", prevent the form from being submitted
     return false;
 }
-
 
 // Sidebar toggle functionality
 const sidebar = document.getElementById('sidebar');
@@ -66,8 +64,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Edit Classroom
+function openEdit(id, section, className, subject, classCode, room) {
+    // Set the values in the modal form
+    document.getElementById('modal-classroom-id').value = id; // Set the hidden field for classroom ID
+    document.getElementById('display-classroom-id').textContent = id; // Display the classroom ID in the modal
+
+    // Set the form field values
+    document.getElementById('className').value = className;
+    document.getElementById('room').value = room;
+    document.getElementById('section').value = section;
+    document.getElementById('subject').value = subject;
+}
+
 // Open classroom details
-function openClassroom(id, section, className, subject, code) {
+function openClassroom(id, section, className, subject, code, room) {
+    console.log(`Opening classroom: ${id}, ${className}`);
+
+    // Update the URL with the classroom ID
+    const newUrl = `${window.location.origin}${window.location.pathname}?classroom_id=${id}`;
+    history.pushState({ classroomId: id }, '', newUrl);
+    console.log('URL updated to', newUrl);
+
     // Hide classroom cards and show classroom details
     document.getElementById('classroom-cards').style.display = 'none';
     const classroomDetails = document.getElementById('classroom-details');
@@ -124,7 +142,6 @@ function openClassroom(id, section, className, subject, code) {
                             </div>
                         </div>
                     `;
-                   peopleList.appendChild(studentElement);
                 });
             } else {
                 peopleList.innerHTML = '<span class="text-muted">No students enrolled yet.</span>';
