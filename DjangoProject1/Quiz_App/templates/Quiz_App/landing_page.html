@@ -109,177 +109,171 @@
     </div>
     {% endif %}
 
-    {% if classrooms %}
-    <div class="container">
-        <div class="content-area">
-            <div id="classroom-cards" class="row g-4">
-                {% for classroom in classrooms %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-lg h-100" onclick="openClassroom({{ classroom.id }}, '{{ classroom.section }}', '{{ classroom.class_name }}', '{{ classroom.subject }}', '{{ classroom.class_code }}')">
-                            <!-- Card Header -->
-                            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4caf50, #81c784);">
-                                <div>
-                                    <h5 class="card-title mb-0">{{ classroom.class_name }}</h5>
-                                    <p class="mb-0">{{ classroom.subject }}</p>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-link text-white p-0" type="button" id="dropdownMenuButton{{ classroom.id }}" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end p-0"
-                                        style="font-size: 0.75rem; min-width: 120px;"
-                                        aria-labelledby="dropdownMenuButton{{ classroom.id }}">
-                                        {% if user.profile.role == 'student' %}
-                                            <!-- Only visible to students -->
-                                            <li>
-                                                <form id="unenroll-form" action="{% url 'unenroll_student' classroom.id %}" method="post" onsubmit="return confirmUnenroll()">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Unenroll</button>
-                                                </form>
-                                            </li>
-
-                                        {% elif user.profile.role == 'teacher' %}
-                                            <!-- Only visible to teachers -->
-                                            <li>
-                                                <form method="post" id="delete-form" action="{% url 'delete_classroom' classroom.id %}" onsubmit="return confirmDeleteClass()">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Delete</button>
-                                                </form>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
+{% if not selected_classroom %}
+<div class="container">
+    <div class="content-area">
+        <div id="classroom-cards" class="row g-4">
+            {% for classroom in classrooms %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-lg h-100" style="cursor: pointer;" onclick="navigateToClassroom('{{ classroom.id }}')">
+                        <!-- Card Header -->
+                        <div class="card-header text-white d-flex justify-content-between align-items-center"
+                             style="background: linear-gradient(135deg, #4caf50, #81c784);">
+                            <div>
+                                <h5 class="card-title mb-0">{{ classroom.class_name }}</h5>
+                                <p class="mb-0">{{ classroom.subject }}</p>
                             </div>
-
-                            <!-- Card Body -->
-                            <div class="card-body">
-                                {% if user.profile.role == 'student' %}
-                                    <p><strong>Instructor:</strong> {{ classroom.teacher.first_name }} {{ classroom.teacher.last_name }}</p>
-                                {% elif user.profile.role == 'teacher' %}
-                                    <p><strong>Room:</strong> {{ classroom.room }}</p>
-                                {% endif %}
-                                <p><strong>Section:</strong> {{ classroom.section }}</p>
+                            <!-- Dropdown Menu -->
+                            <div class="dropdown">
+                                <button class="btn btn-link text-white p-0" type="button" id="dropdownMenuButton{{ classroom.id }}"
+                                        data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end p-0" style="font-size: 0.75rem; min-width: 120px;"
+                                    aria-labelledby="dropdownMenuButton{{ classroom.id }}">
+                                    {% if user.profile.role == 'student' %}
+                                        <li>
+                                            <form id="unenroll-form" action="{% url 'unenroll_student' classroom.id %}" method="post" onsubmit="return confirmUnenroll()">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Unenroll</button>
+                                            </form>
+                                        </li>
+                                    {% elif user.profile.role == 'teacher' %}
+                                        <li>
+                                            <form method="post" id="delete-form" action="{% url 'delete_classroom' classroom.id %}" onsubmit="return confirmDeleteClass()">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item px-3 py-2" style="color: black;" onclick="event.stopPropagation();">Delete</button>
+                                            </form>
+                                        </li>
+                                    {% endif %}
+                                </ul>
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
 
-        <div id="classroom-details" style="display: none;">
-                <!-- Banner with Classroom Details -->
-                <div class="banner d-flex flex-column align-items-start px-4 py-3" style="margin-top: -25px;">
-                    <!-- Back Button -->
-                    <button class="btn btn-light btn-sm rounded-circle mb-2" onclick="showClassroomCards()" title="Back">
-                        <i class="bi bi-arrow-left"></i>
-                    </button>
-                    <!-- Classroom Info -->
-                    <div class="d-flex align-items-center w-100 text-white">
-                        <div class="me-3"> <!-- Added margin-right to create space -->
-                            <h3 id="class-name" class="mb-0"></h3>
-                            <p id="class-section" class="mb-1" style=""></p>
-                            <p id="class-join-code" class="mb-0"></p>
-                        </div>
-                        <!-- Edit Button aligned to the right edge -->
-                        <span class="ms-auto" data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Classroom" style="cursor: pointer; position: relative; top: -65px;">
-                            <i class="bi bi-pencil"></i>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Tabs -->
-                <div class="tabs-container">
-                    <ul class="nav nav-tabs" id="classroomTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="stream-tab" data-bs-toggle="tab" data-bs-target="#stream" type="button">Quizzes</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="classwork-tab" data-bs-toggle="tab" data-bs-target="#classwork" type="button">Grades</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="people-tab" data-bs-toggle="tab" data-bs-target="#people" type="button">People</button>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <!-- Quiz Tab with Example Quiz -->
-                        <div class="tab-pane fade show active" id="stream">
-                            {% if user.profile.role == 'teacher' %}
-                                <div class="d-flex justify-content-start mt-3">
-                                    {% for classroom in classrooms %}
-                                        <a href="{% url 'create_quiz' classroom.id %}"
-                                           class="btn btn-primary btn-sm rounded-5 px-3 py-2 shadow">
-                                            <i class="bi bi-plus-lg me-1"></i> Create Quiz
-                                        </a>
-                                    {% endfor %}
-                                </div>
+                        <!-- Card Body -->
+                        <div class="card-body">
+                            {% if user.profile.role == 'student' %}
+                                <p><strong>Instructor:</strong> {{ classroom.teacher.first_name }} {{ classroom.teacher.last_name }}</p>
+                            {% elif user.profile.role == 'teacher' %}
+                                <p><strong>Room:</strong> {{ classroom.room }}</p>
                             {% endif %}
-                            <!-- Heading Below the Button -->
-                            <h5 class="mt-3">Quizzes</h5>
-
-                                {% if quizzes %}
-                                <div class="mt-4">
-                                    <h5>Available Quizzes</h5>
-                                    <ul class="list-group">
-                                        {% for quiz in quizzes %}
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <strong>{{ quiz.title }}</strong> ({{ quiz.quiz_type }})
-                                                    <br>
-                                                    <small>Due: {{ quiz.due_date|date:"M d, Y h:i A" }}</small>
-                                                    <br>
-                                                    <small>Classroom: {{ quiz.classroom.class_name }} - {{ quiz.classroom.section }}</small>
-                                                </div>
-                                                <a href="#" class="btn btn-outline-primary btn-sm">View Quiz</a>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            {% else %}
-                                <p class="text-muted mt-4">No quizzes available.</p>
-                            {% endif %}
-                            </div>
-
-
-                        <!-- Your Grades Tab -->
-                        <div class="tab-pane fade" id="classwork">
-                            <h5 class="mt-3">Your Grades</h5>
-                            <p> </p>
-                        </div>
-
-                        <!-- People Tab -->
-                        <div class="tab-pane fade" id="people">
-                            <h5 class="mt-3 mb-0">Teacher</h5>
-                            <hr>
-                            <div class="teacher-list">
-
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center mt-4">
-                                <h5 class="mb-0">Student</h5>
-                                <!-- Add People Icon Button -->
-                                {% if user.profile.role == 'teacher' %}
-                                        <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 40px; height: 40px;" data-bs-toggle="modal" data-bs-target="#addStudent">
-                                        <i class="bi bi-person-plus"></i>
-                                        </button>
-                                {% endif %}
-                            </div>
-
-                            <hr>
-
-                            <!-- Display Teacher -->
-                            <div class="people-list">
-                                {% for student in classroom.students.all %}
-
-                                {% endfor %}
-                            </div>
+                            <p><strong>Section:</strong> {{ classroom.section }}</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
-    {% endif %}
+</div>
+{% endif %}
+
+
+        {% if selected_classroom %}
+        <!-- Full Page Classroom Details -->
+        <div id="classroom-details" class="container-fluid" style="display: block;">
+            <!-- Banner with Classroom Details -->
+            <div class="banner d-flex flex-column align-items-start px-4 py-3">
+                <!-- Back Button -->
+                <button class="btn btn-light btn-sm rounded-circle mb-2" onclick="window.location.href='?'" title="Back">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <!-- Classroom Info -->
+                <div class="d-flex align-items-center w-100 text-white">
+                    <div>
+                        <h3>{{ selected_classroom.class_name }} ({{ selected_classroom.subject }})</h3>
+                        <p class="mb-1"><strong>Section:</strong> {{ selected_classroom.section }}</p>
+                        <p class="mb-0"><strong>Class Code:</strong> {{ selected_classroom.class_code }}</p>
+                    </div>
+                    <!-- Edit Button -->
+                    <span class="ms-auto" data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Classroom" style="cursor: pointer;">
+                        <i class="bi bi-pencil"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <ul class="nav nav-tabs" id="classroomTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#stream">Quizzes</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#classwork">Grades</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#people">People</button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Quiz Tab -->
+                    <div class="tab-pane fade show active" id="stream">
+                        {% if user.profile.role == 'teacher' %}
+                        <div class="d-flex justify-content-start mt-3">
+                            <a href="{% url 'create_quiz' selected_classroom.id %}" class="btn btn-primary btn-sm rounded-5 px-3 py-2 shadow">
+                                <i class="bi bi-plus-lg me-1"></i> Create Quiz
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        <h5 class="mt-3">Quizzes</h5>
+                        {% if quizzes %}
+                        <div class="mt-4">
+                            <ul class="list-group">
+                                {% for quiz in quizzes %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ quiz.title }}</strong> ({{ quiz.quiz_type }})
+                                        <br>
+                                        <small>Due: {{ quiz.due_date|date:"M d, Y h:i A" }}</small>
+                                        <br>
+                                        <small>Classroom: {{ quiz.classroom.class_name }} - {{ quiz.classroom.section }}</small>
+                                    </div>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Quiz</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <p class="text-muted mt-4">No quizzes available.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Grades Tab -->
+                    <div class="tab-pane fade" id="classwork">
+                        <h5 class="mt-3">Your Grades</h5>
+                        <p>Grades will appear here.</p>
+                    </div>
+
+                    <!-- People Tab -->
+                    <div class="tab-pane fade" id="people">
+                        <h5 class="mt-3 mb-0">Teacher</h5>
+                        <hr>
+                        <p>{{ selected_classroom.teacher.first_name }} {{ selected_classroom.teacher.last_name }}</p>
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <h5 class="mb-0">Students</h5>
+                            {% if user.profile.role == 'teacher' %}
+                            <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0" style="width: 40px; height: 40px;" data-bs-toggle="modal" data-bs-target="#addStudent">
+                                <i class="bi bi-person-plus"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        <hr>
+                        <ul>
+                            {% for student in selected_classroom.students.all %}
+                                <li>{{ student.first_name }} {{ student.last_name }}</li>
+                            {% empty %}
+                                <p>No students enrolled.</p>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
 
     <!-- Add Student -->
     <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
@@ -519,6 +513,11 @@
 
     <script type="text/javascript">
         const defaultAvatar = "{% static 'images/user_avatar.png' %}";
+
+        function navigateToClassroom(classroomId) {
+            // Navigate and refresh to load the classroom page
+            window.location.href = `?classroom_id=${classroomId}`;
+        }
     </script>
 
 

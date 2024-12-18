@@ -273,7 +273,6 @@ def get_classroom_students(request, classroom_id):
         return JsonResponse({"error": "Classroom not found"}, status=404)
 
 
-# Landing page view
 @login_required
 def landing_page(request):
     classrooms = []
@@ -287,13 +286,11 @@ def landing_page(request):
         elif request.user.profile.role == 'student':
             classrooms = request.user.classrooms.all().prefetch_related('students')
 
-        # Fetch quizzes related to these classrooms
-        quizzes = Quiz.objects.filter(classroom__in=classrooms).order_by('due_date')
-
-    # Check if a classroom ID is provided to show its details
-    classroom_id = request.GET.get('classroom_id')
-    if classroom_id:
-        selected_classroom = get_object_or_404(Classroom, id=classroom_id)
+        # Fetch selected classroom details based on query parameter
+        classroom_id = request.GET.get('classroom_id')
+        if classroom_id:
+            selected_classroom = get_object_or_404(Classroom, id=classroom_id)
+            quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')  # Quizzes for selected classroom
 
     join_form = JoinClassForm()
     create_form = CreateClassForm()
@@ -303,14 +300,15 @@ def landing_page(request):
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
-        'quizzes': quizzes,  # Pass quizzes to the template
+        'selected_classroom': selected_classroom,  # Pass selected classroom
+        'quizzes': quizzes,  # Pass quizzes for the selected classroom
         'join_form': join_form,
         'create_form': create_form,
         'profile_form': profile_form,
         'password_form': password_form,
         'add_student': add_student,
-        'selected_classroom': selected_classroom,
     })
+
 
 
 # Home page view
