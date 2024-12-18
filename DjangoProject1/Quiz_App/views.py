@@ -3,16 +3,16 @@ import json
 import string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
+from django.urls import reverse
+
 from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
-    PasswordChangeForm, AddStudentForm, QuestionForm
+    PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom, Quiz, Question
-
-
 
 #Sign Up View
 def signup_view(request):
@@ -26,8 +26,6 @@ def signup_view(request):
     else:
         form = SignupForm()
     return render(request, 'Quiz_App/signup.html', {'form': form})
-
-
 
 # Login view
 def login_view(request):
@@ -59,40 +57,40 @@ def login_view(request):
 # Add Student in a Classroom
 def add_student(request):
     if request.method == "POST":
+        classroom_id = request.POST.get('classroom_id')
+        print("Classroom ID from POST:", classroom_id)  # Debugging: Check the classroom ID
+
         form = AddStudentForm(request.POST)
         if form.is_valid():
-            classroom_id = request.POST.get('classroom_id')
             classroom = get_object_or_404(Classroom, id=classroom_id)
+
             student_email_or_username = form.cleaned_data['email_or_username']
 
             try:
-                # Try to get the student by email
                 student = User.objects.get(email=student_email_or_username)
             except User.DoesNotExist:
                 try:
-                    # If not found by email, try by username
                     student = User.objects.get(username=student_email_or_username)
                 except User.DoesNotExist:
-                    # If no student found, show error message
                     messages.error(request, "Student not found.")
-                    return redirect('landing')  # Redirect to the page where you want to show the message
+                    return redirect('landing')  # Redirect to landing without classroom_id
 
-            # Add the student to the classroom
             classroom.students.add(student)
             classroom.save()
 
-            # Show success message
-            messages.success(request, f"Student {student} has been added to the classroom.")
+            messages.success(request,f"Student {student.first_name} {student.last_name} has been added to the classroom.")
 
-            return redirect('landing')  # Redirect to the appropriate page (e.g., classroom page)
+            # Redirect to the same page but include the classroom_id in the query string
+            return HttpResponseRedirect(f"{reverse('landing')}?classroom_id={classroom.id}")
+
         else:
             messages.error(request, "Form is not valid.")
-            return redirect('landing')  # Redirect to the form page
-
+            return redirect('landing')  # Redirect to landing without classroom_id
     else:
         form = AddStudentForm()
 
     return render(request, 'landing_page.html', {'add_student': form})
+
 
 # Uneroll student from the classroom
 def unenroll_student(request, classroom_id):
@@ -125,6 +123,23 @@ def delete_classroom(request, classroom_id):
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('landing')  # Update this to the name of your classroom list view
+
+
+def remove_student(request):
+    if request.method == "POST":
+        classroom_id = request.POST.get('classroom_id')
+        student_id = request.POST.get('student_id')
+
+        classroom = get_object_or_404(Classroom, id=classroom_id)
+        student = get_object_or_404(User, id=student_id)
+
+        # Remove the student from the classroom
+        classroom.students.remove(student)
+
+        messages.success(request, f"{student.first_name} {student.last_name} has been removed from the classroom.")
+        return redirect(f'{reverse("landing")}?classroom_id={classroom.id}')
+    else:
+        return redirect('landing')
 
 # Profile Management Update in Credentials
 @login_required
@@ -243,35 +258,29 @@ def create_class(request):
     return render(request, 'landing_page.html', {'form': form})
 
 
-# Process to get the Students and Teacher in People Tab.
-def get_classroom_students(request, classroom_id):
-    try:
-        classroom = Classroom.objects.get(id=classroom_id)
-        students = classroom.students.all()
-        teacher = classroom.teacher
+# Edit Classroom in Details
+def edit_classroom(request):
+    if request.method == 'POST':
+        classroom_id = request.POST.get('modal-classroom-id')  # Get the classroom ID from the hidden field
+        classroom = get_object_or_404(Classroom, id=classroom_id)  # Get the classroom instance
+        form = EditClassroomForm(request.POST, instance=classroom)  # Populate form with data
 
-        current_user = 'teacher' if request.user == teacher else 'student'
+        if form.is_valid():
+            form.save()  # Save the updated classroom
+            messages.success(request, 'Classroom updated successfully!')
+            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+        else:
+            # If there are form errors, print them (optional) and show an error message
+            print(form.errors)  # Optional: for debugging form errors
+            messages.error(request, 'There was an error updating the classroom.')
+            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+    else:
+        # If it's a GET request, display the form
+        form = EditClassroomForm()
 
-        student_data = [
-            {"first_name": student.first_name, "last_name": student.last_name}
-            for student in students
-        ]
-
-        teacher_data = {
-            "id": teacher.id,
-            "first_name": teacher.first_name,
-            "last_name": teacher.last_name
-        }
-
-        return JsonResponse({
-            "teacher": teacher_data,
-            "students": student_data,
-            "current_user": current_user,
-        })
-
-    except Classroom.DoesNotExist:
-        return JsonResponse({"error": "Classroom not found"}, status=404)
-
+    return render(request, 'Quiz_App/landing_page.html', {
+        'form': form,
+    })
 
 @login_required
 def landing_page(request):
@@ -297,6 +306,7 @@ def landing_page(request):
     profile_form = ProfileForm(instance=request.user)
     password_form = PasswordChangeForm()
     add_student = AddStudentForm()
+    edit_classroom = EditClassroomForm()
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
@@ -304,6 +314,7 @@ def landing_page(request):
         'quizzes': quizzes,  # Pass quizzes for the selected classroom
         'join_form': join_form,
         'create_form': create_form,
+        'edit_classroom': edit_classroom,
         'profile_form': profile_form,
         'password_form': password_form,
         'add_student': add_student,
@@ -371,7 +382,7 @@ def create_quiz(request, classroom_id):
                 )
 
             messages.success(request, "Quiz and questions created successfully!")
-            return redirect('landing')
+            return redirect(f'{reverse("landing")}?classroom_id={classroom.id}')
 
         else:
             messages.error(request, "Please correct the errors in the form.")

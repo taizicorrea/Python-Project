@@ -6,10 +6,9 @@
 {% block content %}
 <div class="container mt-4">
     <!-- Back Button -->
-    <a href="{% url 'landing' %}" class="btn btn-outline-secondary mb-3">
+    <a href="{% url 'landing' %}?classroom_id={{ classroom.id }}" class="btn btn-outline-secondary mb-3">
         <i class="bi bi-arrow-left"></i> Back to Classroom
     </a>
-
     <!-- Classroom Banner -->
     <div class="p-4 text-white rounded-3 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4caf50, #81c784);">
         <h4 class="mb-1">{{ classroom.class_name }} ({{ classroom.section }})</h4>
@@ -26,12 +25,12 @@
                 {% csrf_token %}
                 <!-- Title Field -->
                 <div class="col-12">
-                    <label for="title" class="form-label fw-semibold">Title</label>
+                    <label id="title" class="form-label fw-semibold">Title</label>
                     {{ form.title }}
                 </div>
                 <!-- Quiz Type Field -->
                 <div class="col-md-6">
-                    <label for="quiz_type" class="form-label fw-semibold">Quiz Type</label>
+                    <label id="quiz_type" class="form-label fw-semibold">Quiz Type</label>
                     {{ form.quiz_type }}
                 </div>
                 <!-- Due Date Field -->
@@ -41,7 +40,7 @@
                 </div>
                 <!-- Description Field -->
                 <div class="col-12">
-                    <label for="description" class="form-label fw-semibold">Description</label>
+                    <label id="description" class="form-label fw-semibold">Description</label>
                     {{ form.description }}
                 </div>
 
@@ -60,7 +59,7 @@
 
                 <!-- Submit and Cancel Buttons -->
                 <div class="col-12 d-flex justify-content-end gap-2">
-                    <a href="{% url 'landing' %}" class="btn btn-secondary">Cancel</a>
+                    <a href="{% url 'landing' %}?classroom_id={{ classroom.id }}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-success px-4">Create Quiz</button>
                 </div>
             </form>

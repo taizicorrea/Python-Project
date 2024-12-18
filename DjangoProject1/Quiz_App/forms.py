@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Profile
+from .models import Profile, Classroom
 from .models import Quiz
 
 class SignupForm(forms.ModelForm):
@@ -148,6 +148,18 @@ class PasswordChangeForm(forms.Form):
         label="Confirm New Password"
     )
 
+
+class EditClassroomForm(forms.ModelForm):
+    class Meta:
+        model = Classroom
+        fields = ['class_name', 'room', 'section', 'subject']
+        # Define widgets to style and customize form fields
+        widgets = {
+            'class_name': forms.TextInput(attrs={'class': 'form-control', 'id': 'className'}),
+            'room': forms.TextInput(attrs={'class': 'form-control', 'id': 'room'}),
+            'section': forms.TextInput(attrs={'class': 'form-control', 'id': 'section'}),
+            'subject': forms.TextInput(attrs={'class': 'form-control', 'id': 'subject'}),
+        }
 
 # Jdango Form for Login using the Authentication
 class CustomAuthenticationForm(AuthenticationForm):
