@@ -183,7 +183,7 @@ class CustomAuthenticationForm(AuthenticationForm):
 class QuizForm(forms.ModelForm):
     class Meta:
         model = Quiz
-        fields = ['title', 'quiz_type', 'due_date', 'description']
+        fields = ['title', 'quiz_type', 'due_date', 'description', 'timer']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -197,25 +197,43 @@ class QuizForm(forms.ModelForm):
             'due_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'id': 'due_date',
-                'placeholder': 'dd/mm/yyyy --:--'
+                'placeholder': 'dd/mm/yyyy --:--',
+                'type': 'datetime-local',  # Makes it easier to use modern date-time pickers
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'id': 'description',
                 'rows': 4,
-                'placeholder': 'Enter Quiz Description'
+                'placeholder': 'Enter Quiz Description (optional)',
+            }),
+            'timer': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'timer',
+                'placeholder': 'Enter timer in minutes',
+                'min': 1,  # Minimum value is 1 minute
+                'required': True,  # Ensure the field is required on the client side
             }),
         }
 
     def __init__(self, *args, **kwargs):
-        super(QuizForm, self).__init__(*args, **kwargs)
-        # Explicitly set choices without any placeholder option
+        super().__init__(*args, **kwargs)
+        # Explicitly set quiz type choices to avoid ambiguity
         self.fields['quiz_type'].choices = [
             ('multiple_choice', 'Multiple Choice'),
             ('true_false', 'True/False'),
             ('identification', 'Identification'),
         ]
-        self.fields['quiz_type'].required = True  # Ensure the field is required
+        # Add custom validation rules (if needed)
+        self.fields['quiz_type'].required = True  # Quiz type is mandatory
+        self.fields['timer'].required = True  # Timer is mandatory
+        self.fields['due_date'].required = True  # Ensure due_date is not skipped
+
+    def clean_timer(self):
+        """Ensure the timer is a positive integer."""
+        timer = self.cleaned_data.get('timer')
+        if timer is None or timer < 1:
+            raise forms.ValidationError("The timer must be a positive integer (minimum 1 minute).")
+        return timer
 
 class QuestionForm(forms.Form):
     question_text = forms.CharField(

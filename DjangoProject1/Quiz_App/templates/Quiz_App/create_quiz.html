@@ -41,6 +41,12 @@
                     <label for="due_date" class="form-label fw-semibold">Due Date</label>
                     <input type="datetime-local" id="due_date" name="due_date" class="form-control" required>
                 </div>
+
+                <div class="col-md-6">
+                    <label for="quiz_timer" class="form-label fw-semibold">Quiz Timer (in minutes)</label>
+                    <input type="number" id="quiz_timer" name="timer" class="form-control" placeholder="Enter duration in minutes" min="1" required>
+                </div>
+
                 <!-- Description Field -->
                 <div class="col-12">
                     <label id="description" class="form-label fw-semibold">Description</label>
@@ -143,6 +149,7 @@
 <!-- JavaScript for Adding Question From Databank -->
 <script src="{% static 'js/loadExistingQuestion.js' %}"></script>
 <script src="{% static 'js/questionStaging.js' %}"></script>
+<script src="{% static 'js/quizTimer.js' %}"></script>
 
 <!-- JavaScript for Adding Questions Dynamically -->
 <script>
