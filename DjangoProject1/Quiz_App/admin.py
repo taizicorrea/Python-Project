@@ -5,11 +5,30 @@ from .models import Profile, Classroom, Quiz, Question
 
 
 
+@admin.register(Quiz)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ('title', 'classroom_display', 'quiz_type', 'due_date', 'created_at')
+    search_fields = ('title', 'classroom__class_name', 'quiz_type')
+    list_filter = ('quiz_type', 'due_date')
+    ordering = ('-created_at',)
+
+    def classroom_display(self, obj):
+        """Display the classroom associated with the quiz."""
+        return f"{obj.classroom.class_name} ({obj.classroom.section})"
+    classroom_display.short_description = 'Classroom'
+
+
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ('question_text', 'question_type', 'options_display', 'correct_answers_display')
-    list_filter = ('question_type',)
-    search_fields = ('question_text', 'correct_answers')
+    list_display = ('question_text', 'quiz_display', 'question_type', 'options_display', 'correct_answers_display')
+    search_fields = ('question_text', 'quiz__title', 'correct_answers')
+    list_filter = ('question_type', 'quiz__title')
+    ordering = ('quiz',)
+
+    def quiz_display(self, obj):
+        """Display the quiz title for the question."""
+        return obj.quiz.title
+    quiz_display.short_description = 'Quiz'
 
     def options_display(self, obj):
         """Display options as a comma-separated list."""
@@ -20,21 +39,6 @@ class QuestionAdmin(admin.ModelAdmin):
         """Display correct answers as a comma-separated list."""
         return ", ".join(obj.correct_answers_as_list()) if obj.correct_answers_as_list() else "-"
     correct_answers_display.short_description = 'Correct Answers'
-
-
-@admin.register(Quiz)
-class QuizAdmin(admin.ModelAdmin):
-    list_display = ('quiz_display', 'classroom_display', 'quiz_type', 'due_date', 'created_at')
-    list_filter = ('quiz_type', 'due_date')
-    search_fields = ('title', 'classroom__class_name')
-
-    def quiz_display(self, obj):
-        return f"quiz{obj.id}Id - {obj.title}"
-    quiz_display.short_description = "Quiz"
-
-    def classroom_display(self, obj):
-        return f"classroom{obj.classroom.id}Id - {obj.classroom.class_name}"
-    classroom_display.short_description = "Classroom"
 
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):

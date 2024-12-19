@@ -27,7 +27,6 @@ class Classroom(models.Model):
     def __str__(self):
         return f"{self.class_name} - {self.section}"
 
-# Add the Quiz model
 class Quiz(models.Model):
     QUIZ_TYPES = [
         ('multiple_choice', 'Multiple Choice'),
@@ -39,11 +38,12 @@ class Quiz(models.Model):
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name='quizzes')
     quiz_type = models.CharField(max_length=20, choices=QUIZ_TYPES)
     due_date = models.DateTimeField()
-    description = models.TextField(blank=True, null=True)  # Add this line
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.classroom.class_name}"
+        return f"{self.title} ({self.classroom.class_name})"
+
 
 class Question(models.Model):
     QUESTION_TYPES = [
@@ -52,21 +52,27 @@ class Question(models.Model):
         ('identification', 'Identification'),
     ]
 
-    quiz = models.ForeignKey('Quiz', on_delete=models.CASCADE, related_name='questions')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     question_text = models.CharField(max_length=255)
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
-    multiple_choice_options = models.TextField(blank=True, null=True)  # Options for MCQ
-    correct_answers = models.TextField(blank=True, null=True)  # New field for multiple correct answers
+    multiple_choice_options = models.TextField(blank=True, null=True)  # Store options as newline-separated strings
+    correct_answers = models.TextField(blank=True, null=True)  # Store correct answers as newline-separated strings
 
     def options_as_list(self):
-        """Convert multiple_choice_options to a list."""
+        """
+        Convert `multiple_choice_options` to a list.
+        Returns an empty list if no options are provided.
+        """
         return self.multiple_choice_options.split("\n") if self.multiple_choice_options else []
 
     def correct_answers_as_list(self):
-        """Convert correct_answers to a list."""
+        """
+        Convert `correct_answers` to a list.
+        Returns an empty list if no answers are provided.
+        """
         return self.correct_answers.split("\n") if self.correct_answers else []
 
     def __str__(self):
-        return self.question_text
+        return f"Question: {self.question_text} (Type: {self.question_type})"
 
 

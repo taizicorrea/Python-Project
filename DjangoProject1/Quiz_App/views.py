@@ -346,7 +346,7 @@ def create_quiz(request, classroom_id):
     # Restrict access to teachers
     if request.user.profile.role != 'teacher':
         messages.error(request, "You are not authorized to create a quiz.")
-        return redirect('landing')  # Redirect unauthorized users
+        return redirect('landing')
 
     # Fetch the classroom
     classroom = get_object_or_404(Classroom, id=classroom_id)
@@ -357,6 +357,7 @@ def create_quiz(request, classroom_id):
         try:
             # Parse questions data from JSON
             questions_data = json.loads(request.POST.get('questions', '[]'))
+            print("Received questions data:", questions_data)  # Debugging
         except json.JSONDecodeError:
             messages.error(request, "Invalid questions data format.")
             return redirect('create_quiz', classroom_id=classroom.id)
@@ -369,22 +370,24 @@ def create_quiz(request, classroom_id):
 
             # Save Questions
             for question in questions_data:
-                if not all(key in question for key in ['questionText', 'correctAnswer']):
+                # Validate that required keys are present
+                if not all(key in question for key in ['question_text', 'correct_answer']):
                     messages.error(request, "Missing required fields in question data.")
                     return redirect('create_quiz', classroom_id=classroom.id)
 
+                # Save each question
                 Question.objects.create(
                     quiz=quiz,
-                    question_text=question['questionText'],
-                    question_type=form.cleaned_data['quiz_type'],  # Use quiz_type from the form
-                    multiple_choice_options="\n".join(question.get('options', [])),
-                    correct_answers=question.get('correctAnswer', '')
+                    question_text=question['question_text'],
+                    question_type=question.get('question_type', 'multiple_choice'),
+                    multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
+                    correct_answers=question['correct_answer']
                 )
 
             messages.success(request, "Quiz and questions created successfully!")
             return redirect(f'{reverse("landing")}?classroom_id={classroom.id}')
-
         else:
+            print("Form errors:", form.errors)  # Debugging
             messages.error(request, "Please correct the errors in the form.")
 
     else:
@@ -393,16 +396,31 @@ def create_quiz(request, classroom_id):
     return render(request, 'Quiz_App/create_quiz.html', {'form': form, 'classroom': classroom})
 
 
-@login_required
-def fetch_reusable_questions(request):
-    """
-    Fetches all existing questions for reuse.
-    Returns the data as JSON to be used in the front-end.
-    """
-    if request.method == 'GET':
-        questions = list(Question.objects.values('id', 'question_text', 'question_type', 'correct_answer'))
-        return JsonResponse({'questions': questions})
 
+
+def get_questions(request):
+    if request.method == 'GET':
+        try:
+            # Retrieve all questions with the required fields
+            questions = list(
+                Question.objects.values('id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers')
+            )
+
+            # Process multiple choice options and correct answers
+            for question in questions:
+                question['multiple_choice_options'] = question['multiple_choice_options'].split("\n") if question['multiple_choice_options'] else []
+                question['correct_answers'] = question['correct_answers'].split("\n") if question['correct_answers'] else []
+
+            # Return the questions as JSON
+            return JsonResponse({'questions': questions}, status=200)
+
+        except Exception as e:
+            # Log and return an error response
+            print(f"Error retrieving questions: {str(e)}")
+            return JsonResponse({'error': 'Failed to retrieve questions.'}, status=500)
+    else:
+        # Handle non-GET requests
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 @login_required
 def reset_quiz_session(request):

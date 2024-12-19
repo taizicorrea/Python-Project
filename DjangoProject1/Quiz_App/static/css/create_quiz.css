@@ -1,0 +1,196 @@
+/* Sticky Header */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background-color: #ffffff;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Questions Added Section */
+#questionsList {
+    border: 1px solid #ddd;
+    padding: 15px;
+    background-color: #f8faff;
+    border-radius: 5px;
+    min-height: 50px; /* Minimum height for empty state */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center; /* Center the empty state message */
+    justify-content: center;
+}
+
+/* Empty State Styling */
+#questionsList.empty::before {
+    content: "No questions added yet.";
+    font-size: 1rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Cards for Questions */
+.card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    background-color: #ffffff;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Card Header */
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 5px;
+}
+
+.card-text ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+.card-text ul li {
+    margin-bottom: 8px;
+}
+
+.card-text {
+    font-size: 0.9rem;
+    color: #6c757d;
+    line-height: 1.5;
+}
+
+.text-center.text-muted.my-3 {
+    font-size: 1rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Buttons */
+.btn {
+    font-size: 0.875rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+}
+
+.btn-danger {
+    align-self: flex-end;
+    padding: 5px 12px;
+    background-color: #e63946;
+    border-color: #e63946;
+    color: #fff;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c62828;
+    border-color: #b71c1c;
+    transform: scale(1.1);
+}
+
+.btn-primary {
+    background-color: #1d3557;
+    border-color: #1d3557;
+    color: #fff;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #457b9d;
+    border-color: #1d3557;
+    transform: scale(1.1);
+}
+
+/* Modal Content */
+.modal-content {
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background-color: #1d3557;
+    color: #ffffff;
+    border-bottom: none;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.modal-title {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.modal-body {
+    padding: 25px;
+    background-color: #f1f4f8;
+}
+
+/* List Group for Questions */
+.list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.list-group-item:hover {
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Form Input Styling */
+.form-control {
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.9rem;
+    border: 1px solid #ced4da;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #457b9d;
+    box-shadow: 0 0 5px rgba(69, 123, 157, 0.5);
+}
+
+.form-label {
+    font-weight: bold;
+    color: #212529;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+/* Scrollbar Styling */
+#questionsList::-webkit-scrollbar {
+    width: 10px;
+}
+
+#questionsList::-webkit-scrollbar-thumb {
+    background-color: #457b9d;
+    border-radius: 5px;
+}
+
+#questionsList::-webkit-scrollbar-thumb:hover {
+    background-color: #1d3557;
+}
+
+#questionsList::-webkit-scrollbar-track {
+    background-color: #f1f4f8;
+}
