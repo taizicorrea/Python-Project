@@ -20,15 +20,15 @@ class QuizAdmin(admin.ModelAdmin):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ('question_text', 'quiz_display', 'question_type', 'options_display', 'correct_answers_display')
-    search_fields = ('question_text', 'quiz__title', 'correct_answers')
-    list_filter = ('question_type', 'quiz__title')
-    ordering = ('quiz',)
+    list_display = ('question_text', 'quizzes_display', 'question_type', 'options_display', 'correct_answers_display')
+    search_fields = ('question_text', 'quizzes__title', 'correct_answers')
+    list_filter = ('question_type', 'quizzes__title')
+    ordering = ('question_text',)
 
-    def quiz_display(self, obj):
-        """Display the quiz title for the question."""
-        return obj.quiz.title
-    quiz_display.short_description = 'Quiz'
+    def quizzes_display(self, obj):
+        """Display the quizzes associated with the question as a comma-separated list."""
+        return ", ".join([quiz.title for quiz in obj.quizzes.all()])
+    quizzes_display.short_description = 'Quizzes'
 
     def options_display(self, obj):
         """Display options as a comma-separated list."""

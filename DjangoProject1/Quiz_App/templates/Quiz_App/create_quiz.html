@@ -168,55 +168,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render the existing questions in the modal
     function renderExistingQuestions(questions) {
-        existingQuestionsList.innerHTML = ''; // Clear the list
-        questions.forEach(question => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('list-group-item');
-            listItem.innerHTML = `
-                <div>
-                    <p><strong>Question:</strong> ${question.question_text}</p>
-                    <p><strong>Type:</strong> ${formatQuestionType(question.question_type)}</p>
-                    ${question.multiple_choice_options?.length ? `
-                        <p><strong>Options:</strong></p>
-                        <ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>
-                    ` : ''}
-                    <p><strong>Correct Answer(s):</strong> ${
-                        question.correct_answer?.length
-                            ? `<ul>${question.correct_answer.map(answer => `<li>${answer}</li>`).join('')}</ul>`
-                            : '<span class="text-muted">N/A</span>'
-                    }</p>
-                    <button type="button" class="btn btn-primary btn-sm addQuestionBtn">Add</button>
-                </div>
-            `;
-            listItem.querySelector('.addQuestionBtn').addEventListener('click', () => addQuestionToQuiz(question));
-            existingQuestionsList.appendChild(listItem);
-        });
-    }
+        // Clear the existing list
+        existingQuestionsList.innerHTML = '';
 
-    document.getElementById('quizForm').addEventListener('submit', (e) => {
-        if (stagedQuestions.length === 0) {
-            e.preventDefault();
-            alert("Please add at least one question before submitting the quiz.");
+        if (!questions || questions.length === 0) {
+            // Handle the case where there are no questions
+            const emptyMessage = document.createElement('p');
+            emptyMessage.classList.add('text-muted', 'text-center');
+            emptyMessage.textContent = 'No questions available.';
+            existingQuestionsList.appendChild(emptyMessage);
             return;
         }
 
-        const hiddenField = document.createElement('input');
-        hiddenField.type = 'hidden';
-        hiddenField.name = 'questions';
-        hiddenField.value = JSON.stringify(stagedQuestions); // Convert questions to JSON
-        document.getElementById('quizForm').appendChild(hiddenField);
-    });
+        // Iterate through the list of questions
+        questions.forEach(question => {
+            try {
+                // Create a list item for each question
+                const listItem = document.createElement('li');
+                listItem.classList.add('list-group-item');
+
+                listItem.innerHTML = `
+                    <div>
+                        <p><strong>Question:</strong> ${question.question_text}</p>
+                        <p><strong>Type:</strong> ${formatQuestionType(question.question_type)}</p>
+                        ${question.multiple_choice_options?.length ? `
+                            <p><strong>Options:</strong></p>
+                            <ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>
+                        ` : ''}
+                        <p><strong>Correct Answer(s):</strong> ${
+                            question.correct_answers?.length
+                                ? `<ul>${question.correct_answers.map(answer => `<li>${answer}</li>`).join('')}</ul>`
+                                : '<span class="text-muted">N/A</span>'
+                        }</p>
+                        <button type="button" class="btn btn-primary btn-sm addQuestionBtn">Add</button>
+                    </div>
+                `;
+
+                // Attach event listener to the "Add" button
+                const addButton = listItem.querySelector('.addQuestionBtn');
+                addButton.addEventListener('click', () => {
+                    addQuestionToQuiz(question);
+                });
+
+                // Append the list item to the existing questions list
+                existingQuestionsList.appendChild(listItem);
+            } catch (error) {
+                console.error('Error rendering question:', question, error);
+            }
+        });
+    }
+
+            document.getElementById('quizForm').addEventListener('submit', (e) => {
+            if (stagedQuestions.length === 0) {
+                e.preventDefault();
+                alert("Please add at least one question before submitting the quiz.");
+                return;
+            }
+
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'questions';
+            hiddenField.value = JSON.stringify(stagedQuestions); // Convert questions to JSON
+            console.log("Submitting Questions:", stagedQuestions); // Debug log
+            document.getElementById('quizForm').appendChild(hiddenField);
+        });
 
     // Add a question to the "Questions Added" section
-    function addQuestionToQuiz(question) {
+       function addQuestionToQuiz(question) {
         if (stagedQuestions.some(q => q.id === question.id)) {
             alert("This question has already been added.");
             return;
         }
 
         stagedQuestions.push(question); // Add question to the stagedQuestions array
-        addQuestionToUI(question); // Render the question
-        alert(`Question "${question.question_text}" added to the quiz!`);
+        console.log("Staged Questions:", stagedQuestions); // Debug log
+
+        const questionCard = document.createElement('div');
+        questionCard.classList.add('card', 'border-0', 'shadow-sm', 'p-3', 'mb-2');
+
+        questionCard.innerHTML = `
+            <div class="card-body">
+                <h6 class="card-title">${question.question_text}</h6>
+                <p class="card-text">
+                    <strong>Type:</strong> ${formatQuestionType(question.question_type)}<br>
+                    ${question.multiple_choice_options?.length
+                        ? `<strong>Options:</strong><ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>`
+                        : ''}
+                    <strong>Correct Answer(s):</strong> ${
+                        question.correct_answers?.length
+                            ? `<ul>${question.correct_answers.map(answer => `<li>${answer}</li>`).join('')}</ul>`
+                            : 'N/A'
+                    }
+                </p>
+                <button type="button" class="btn btn-danger btn-sm removeQuestionBtn">Remove</button>
+            </div>
+        `;
+
+        questionCard.querySelector('.removeQuestionBtn').addEventListener('click', () => {
+            stagedQuestions = stagedQuestions.filter(q => q.id !== question.id);
+            questionCard.remove();
+            console.log("Staged Questions after removal:", stagedQuestions); // Debug log
+            toggleNoQuestionsMessage();
+            alert(`Question "${question.question_text}" removed from the quiz.`);
+        });
+
+        questionsList.appendChild(questionCard);
+        toggleNoQuestionsMessage(); // Update the empty state message visibility
     }
 
     // Add a question to the UI

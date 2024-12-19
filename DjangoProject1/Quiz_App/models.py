@@ -52,24 +52,16 @@ class Question(models.Model):
         ('identification', 'Identification'),
     ]
 
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
+    quizzes = models.ManyToManyField(Quiz, related_name='questions', blank=True)
     question_text = models.CharField(max_length=255)
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
-    multiple_choice_options = models.TextField(blank=True, null=True)  # Store options as newline-separated strings
-    correct_answers = models.TextField(blank=True, null=True)  # Store correct answers as newline-separated strings
+    multiple_choice_options = models.TextField(blank=True, null=True)
+    correct_answers = models.TextField(blank=True, null=True)
 
     def options_as_list(self):
-        """
-        Convert `multiple_choice_options` to a list.
-        Returns an empty list if no options are provided.
-        """
         return self.multiple_choice_options.split("\n") if self.multiple_choice_options else []
 
     def correct_answers_as_list(self):
-        """
-        Convert `correct_answers` to a list.
-        Returns an empty list if no answers are provided.
-        """
         return self.correct_answers.split("\n") if self.correct_answers else []
 
     def __str__(self):

@@ -337,18 +337,12 @@ def profile_view(request):
     return render(request, 'landing_page.html')
 
 
-@login_required
 def create_quiz(request, classroom_id):
-    """
-    View to create a quiz with associated questions.
-    Restricted to teachers only.
-    """
     # Restrict access to teachers
     if request.user.profile.role != 'teacher':
         messages.error(request, "You are not authorized to create a quiz.")
         return redirect('landing')
 
-    # Fetch the classroom
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
     if request.method == 'POST':
@@ -357,45 +351,49 @@ def create_quiz(request, classroom_id):
         try:
             # Parse questions data from JSON
             questions_data = json.loads(request.POST.get('questions', '[]'))
-            print("Received questions data:", questions_data)  # Debugging
+            print("Received questions data:", questions_data)  # Debug log
         except json.JSONDecodeError:
             messages.error(request, "Invalid questions data format.")
             return redirect('create_quiz', classroom_id=classroom.id)
 
         if form.is_valid():
-            # Save the Quiz instance
             quiz = form.save(commit=False)
             quiz.classroom = classroom
             quiz.save()
 
-            # Save Questions
             for question in questions_data:
-                # Validate that required keys are present
-                if not all(key in question for key in ['question_text', 'correct_answer']):
-                    messages.error(request, "Missing required fields in question data.")
-                    return redirect('create_quiz', classroom_id=classroom.id)
+                # Check if the ID is numeric (existing question)
+                if isinstance(question['id'], int):
+                    try:
+                        existing_question = Question.objects.get(id=question['id'])
+                        quiz.questions.add(existing_question)
+                    except Question.DoesNotExist:
+                        messages.error(request, f"Question with ID {question['id']} does not exist.")
+                        continue
 
-                # Save each question
-                Question.objects.create(
-                    quiz=quiz,
-                    question_text=question['question_text'],
-                    question_type=question.get('question_type', 'multiple_choice'),
-                    multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
-                    correct_answers=question['correct_answer']
-                )
+                # Check if the ID is a string starting with "temp-" (new question)
+                elif isinstance(question['id'], str) and question['id'].startswith('temp-'):
+                    new_question = Question.objects.create(
+                        question_text=question['question_text'],
+                        question_type=question.get('question_type', 'multiple_choice'),
+                        multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
+                        correct_answers="\n".join(question.get('correct_answer', [])),
+                    )
+                    quiz.questions.add(new_question)
+
+                else:
+                    messages.error(request, "Invalid question data format.")
+                    continue
 
             messages.success(request, "Quiz and questions created successfully!")
             return redirect(f'{reverse("landing")}?classroom_id={classroom.id}')
         else:
-            print("Form errors:", form.errors)  # Debugging
+            print("Form errors:", form.errors)  # Debug log
             messages.error(request, "Please correct the errors in the form.")
-
     else:
         form = QuizForm()
 
     return render(request, 'Quiz_App/create_quiz.html', {'form': form, 'classroom': classroom})
-
-
 
 
 def get_questions(request):
@@ -421,6 +419,7 @@ def get_questions(request):
     else:
         # Handle non-GET requests
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
 
 @login_required
 def reset_quiz_session(request):
