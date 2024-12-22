@@ -7,6 +7,8 @@ from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpR
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from django.urls import reverse
+from django.db import transaction
+
 
 from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
     PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm
@@ -20,7 +22,13 @@ def signup_view(request):
         form = SignupForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # Automatically log in the user
+
+            # Set the backend for the user manually
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+
+            # Log in the user
+            login(request, user)
+
             messages.success(request, "Signup successful! Welcome!")
             return redirect('landing')  # Redirect to landing page
     else:
@@ -337,6 +345,7 @@ def profile_view(request):
     return render(request, 'landing_page.html')
 
 
+@login_required
 def create_quiz(request, classroom_id):
     # Restrict access to teachers
     if request.user.profile.role != 'teacher':
@@ -361,29 +370,37 @@ def create_quiz(request, classroom_id):
             quiz.classroom = classroom
             quiz.save()
 
+            linked_existing_questions = []
+            created_new_questions = []
+
             for question in questions_data:
-                # Check if the ID is numeric (existing question)
-                if isinstance(question['id'], int):
-                    try:
+                try:
+                    # Process existing questions
+                    if 'id' in question and isinstance(question['id'], int):
                         existing_question = Question.objects.get(id=question['id'])
                         quiz.questions.add(existing_question)
-                    except Question.DoesNotExist:
-                        messages.error(request, f"Question with ID {question['id']} does not exist.")
-                        continue
+                        linked_existing_questions.append(existing_question.id)
+                        print(f"Linked existing question ID {existing_question.id} to quiz ID {quiz.id}.")
 
-                # Check if the ID is a string starting with "temp-" (new question)
-                elif isinstance(question['id'], str) and question['id'].startswith('temp-'):
-                    new_question = Question.objects.create(
-                        question_text=question['question_text'],
-                        question_type=question.get('question_type', 'multiple_choice'),
-                        multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
-                        correct_answers="\n".join(question.get('correct_answer', [])),
-                    )
-                    quiz.questions.add(new_question)
+                    # Process new questions
+                    elif 'id' in question and isinstance(question['id'], str) and question['id'].startswith('temp-'):
+                        new_question = Question.objects.create(
+                            question_text=question['question_text'],
+                            question_type=question.get('question_type', 'multiple_choice'),
+                            multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
+                            correct_answers="\n".join(question.get('correct_answers', [])),
+                        )
+                        quiz.questions.add(new_question)
+                        created_new_questions.append(new_question.id)
+                        print(f"New question '{new_question.question_text}' created and linked to quiz ID {quiz.id}.")
 
-                else:
-                    messages.error(request, "Invalid question data format.")
-                    continue
+                except Question.DoesNotExist:
+                    messages.error(request, f"Question with ID {question['id']} does not exist.")
+                except Exception as e:
+                    messages.error(request, f"Failed to process question: {e}")
+
+            print("Linked existing questions:", linked_existing_questions)
+            print("Created new questions:", created_new_questions)
 
             messages.success(request, "Quiz and questions created successfully!")
             return redirect(f'{reverse("landing")}?classroom_id={classroom.id}')
@@ -396,36 +413,22 @@ def create_quiz(request, classroom_id):
     return render(request, 'Quiz_App/create_quiz.html', {'form': form, 'classroom': classroom})
 
 
+# Fetch All Questions
+@login_required
 def get_questions(request):
     if request.method == 'GET':
-        try:
-            # Retrieve all questions with the required fields
-            questions = list(
-                Question.objects.values('id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers')
-            )
+        questions = list(
+            Question.objects.values('id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers')
+        )
+        for question in questions:
+            question['multiple_choice_options'] = question['multiple_choice_options'].split("\n") if question['multiple_choice_options'] else []
+            question['correct_answers'] = question['correct_answers'].split("\n") if question['correct_answers'] else []
+        return JsonResponse({'questions': questions}, status=200)
+    return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
-            # Process multiple choice options and correct answers
-            for question in questions:
-                question['multiple_choice_options'] = question['multiple_choice_options'].split("\n") if question['multiple_choice_options'] else []
-                question['correct_answers'] = question['correct_answers'].split("\n") if question['correct_answers'] else []
-
-            # Return the questions as JSON
-            return JsonResponse({'questions': questions}, status=200)
-
-        except Exception as e:
-            # Log and return an error response
-            print(f"Error retrieving questions: {str(e)}")
-            return JsonResponse({'error': 'Failed to retrieve questions.'}, status=500)
-    else:
-        # Handle non-GET requests
-        return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
-
+# Reset Quiz Session
 @login_required
 def reset_quiz_session(request):
-    """
-    Resets the session data for a quiz under creation.
-    """
     if 'quiz_data' in request.session:
         del request.session['quiz_data']
     messages.success(request, "Quiz session reset successfully.")
@@ -433,9 +436,20 @@ def reset_quiz_session(request):
 
 @login_required
 def add_question(request):
-    """
-    Fetch existing questions from the database for reuse.
-    """
     if request.method == 'GET':
-        questions = list(Question.objects.values('id', 'question_text', 'question_type'))
-        return JsonResponse({'questions': questions})
+        questions = list(
+            Question.objects.values('id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers')
+        )
+        for question in questions:
+            question['multiple_choice_options'] = (
+                question['multiple_choice_options'].split("\n") if question['multiple_choice_options'] else []
+            )
+            question['correct_answers'] = (
+                question['correct_answers'].split("\n") if question['correct_answers'] else []
+            )
+
+        return JsonResponse({'questions': questions}, status=200)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+

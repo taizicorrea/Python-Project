@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Profile, Classroom
 from .models import Quiz
+from django.utils.timezone import now
 
 class SignupForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -183,22 +184,18 @@ class CustomAuthenticationForm(AuthenticationForm):
 class QuizForm(forms.ModelForm):
     class Meta:
         model = Quiz
-        fields = ['title', 'quiz_type', 'due_date', 'description', 'timer']
+        fields = ['title', 'due_date', 'description', 'timer']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
                 'id': 'title',
                 'placeholder': 'Enter Quiz Title'
             }),
-            'quiz_type': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'quiz_type'
-            }),
             'due_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'id': 'due_date',
                 'placeholder': 'dd/mm/yyyy --:--',
-                'type': 'datetime-local',  # Makes it easier to use modern date-time pickers
+                'type': 'datetime-local',
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -210,23 +207,15 @@ class QuizForm(forms.ModelForm):
                 'class': 'form-control',
                 'id': 'timer',
                 'placeholder': 'Enter timer in minutes',
-                'min': 1,  # Minimum value is 1 minute
-                'required': True,  # Ensure the field is required on the client side
+                'min': 1,
+                'required': True,
             }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Explicitly set quiz type choices to avoid ambiguity
-        self.fields['quiz_type'].choices = [
-            ('multiple_choice', 'Multiple Choice'),
-            ('true_false', 'True/False'),
-            ('identification', 'Identification'),
-        ]
-        # Add custom validation rules (if needed)
-        self.fields['quiz_type'].required = True  # Quiz type is mandatory
-        self.fields['timer'].required = True  # Timer is mandatory
-        self.fields['due_date'].required = True  # Ensure due_date is not skipped
+        self.fields['timer'].required = True
+        self.fields['due_date'].required = True
 
     def clean_timer(self):
         """Ensure the timer is a positive integer."""
@@ -234,6 +223,14 @@ class QuizForm(forms.ModelForm):
         if timer is None or timer < 1:
             raise forms.ValidationError("The timer must be a positive integer (minimum 1 minute).")
         return timer
+
+    def clean_due_date(self):
+        due_date = self.cleaned_data.get('due_date')
+        if due_date < now():
+            raise forms.ValidationError("The due date cannot be in the past.")
+        return due_date
+
+
 
 class QuestionForm(forms.Form):
     question_text = forms.CharField(
@@ -260,19 +257,39 @@ class QuestionForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        quiz_type = kwargs.pop('quiz_type', None)  # Dynamically pass 'quiz_type'
+        quiz_type = kwargs.pop('quiz_type', None)
         super().__init__(*args, **kwargs)
 
-        # Adjust form fields based on the quiz type
         if quiz_type == 'multiple_choice':
             self.fields['multiple_choice_options'].required = True
-            self.fields['answer'].widget.attrs['placeholder'] = 'Enter correct option number'
+            self.fields['answer'].widget.attrs['placeholder'] = 'Enter correct option number (e.g., 1)'
         elif quiz_type == 'true_false':
-            self.fields['multiple_choice_options'].widget = forms.HiddenInput()  # Hide options
+            self.fields['multiple_choice_options'].widget = forms.HiddenInput()
             self.fields['answer'] = forms.ChoiceField(
                 choices=[('True', 'True'), ('False', 'False')],
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
         elif quiz_type == 'identification':
-            self.fields['multiple_choice_options'].widget = forms.HiddenInput()  # Hide options
+            self.fields['multiple_choice_options'].widget = forms.HiddenInput()
             self.fields['answer'].widget.attrs['placeholder'] = 'Enter correct answer'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        quiz_type = self.initial.get('quiz_type')
+        answer = cleaned_data.get('answer')
+        options = cleaned_data.get('multiple_choice_options')
+
+        if quiz_type == 'multiple_choice':
+            if not options:
+                raise forms.ValidationError("You must provide options for a multiple-choice question.")
+            options_list = options.split("\n")
+            if not answer.isdigit() or int(answer) < 1 or int(answer) > len(options_list):
+                raise forms.ValidationError("The correct answer must be a valid option number.")
+        elif quiz_type == 'true_false':
+            if answer not in ['True', 'False']:
+                raise forms.ValidationError("The correct answer for True/False must be 'True' or 'False'.")
+        elif quiz_type == 'identification':
+            if not answer:
+                raise forms.ValidationError("You must provide the correct answer for an identification question.")
+
+        return cleaned_data

@@ -28,15 +28,8 @@ class Classroom(models.Model):
         return f"{self.class_name} - {self.section}"
 
 class Quiz(models.Model):
-    QUIZ_TYPES = [
-        ('multiple_choice', 'Multiple Choice'),
-        ('true_false', 'True/False'),
-        ('identification', 'Identification'),
-    ]
-
     title = models.CharField(max_length=255)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name='quizzes')
-    quiz_type = models.CharField(max_length=20, choices=QUIZ_TYPES)
     due_date = models.DateTimeField()
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,16 +49,71 @@ class Question(models.Model):
     quizzes = models.ManyToManyField(Quiz, related_name='questions', blank=True)
     question_text = models.CharField(max_length=255)
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
-    multiple_choice_options = models.TextField(blank=True, null=True)
-    correct_answers = models.TextField(blank=True, null=True)
+
+    # Fields for specific question types
+    multiple_choice_options = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Provide options separated by newlines. Only for Multiple Choice."
+    )
+    correct_answers = models.TextField(
+        blank=True,
+        default='',
+        help_text=(
+            "Correct answer(s): "
+            "For Multiple Choice, provide options separated by newlines. "
+            "For True/False, use 'True' or 'False'. "
+            "For Identification, provide the exact text of the correct answer(s)."
+        )
+    )
 
     def options_as_list(self):
+        """
+        Return multiple choice options as a list.
+        """
         return self.multiple_choice_options.split("\n") if self.multiple_choice_options else []
 
     def correct_answers_as_list(self):
+        """
+        Return correct answers as a list.
+        """
         return self.correct_answers.split("\n") if self.correct_answers else []
+
+    def is_answer_correct(self, user_answer):
+        """
+        Check if a provided answer is correct.
+        For Multiple Choice and Identification, support multiple answers.
+        For True/False, use a direct match.
+        """
+        if self.question_type == 'true_false':
+            return user_answer.strip().lower() == self.correct_answers.strip().lower()
+        elif self.question_type in ['multiple_choice', 'identification']:
+            correct = [answer.strip().lower() for answer in self.correct_answers_as_list()]
+            return user_answer.strip().lower() in correct
+        return False
+
+    def clean(self):
+        """
+        Custom validation for question fields based on `question_type`.
+        """
+        from django.core.exceptions import ValidationError
+
+        if self.question_type == 'multiple_choice':
+            if not self.multiple_choice_options:
+                raise ValidationError("Multiple choice questions must have options.")
+        elif self.question_type == 'true_false':
+            if self.correct_answers.strip().lower() not in ['true', 'false']:
+                raise ValidationError("True/False questions must have 'True' or 'False' as the correct answer.")
+        elif self.question_type == 'identification':
+            if not self.correct_answers:
+                raise ValidationError("Identification questions must have at least one correct answer.")
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to include custom validation.
+        """
+        self.full_clean()  # Call clean method before saving
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Question: {self.question_text} (Type: {self.question_type})"
-
-

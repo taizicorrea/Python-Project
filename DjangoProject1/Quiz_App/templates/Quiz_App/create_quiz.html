@@ -6,7 +6,6 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/create_quiz.css' %}">
 
-
 <div class="container mt-4">
     <!-- Back Button -->
     <a href="{% url 'landing' %}?classroom_id={{ classroom.id }}" class="btn btn-outline-secondary mb-3">
@@ -26,31 +25,49 @@
             <!-- Quiz Form -->
             <form method="post" id="quizForm" class="row g-3">
                 {% csrf_token %}
+                <input type="hidden" name="questions" id="questionsData" value="[]">
+
                 <!-- Title Field -->
                 <div class="col-12">
-                    <label id="title" class="form-label fw-semibold">Title</label>
-                    {{ form.title }}
+                    <label for="title" class="form-label fw-semibold">Title</label>
+                    <input type="text" id="title" name="title" class="form-control"
+                        value="{{ form.title.value|default:'' }}"
+                        placeholder="Enter Quiz Title" required>
+                    {% if form.title.errors %}
+                        <div class="text-danger">{{ form.title.errors|join:', ' }}</div>
+                    {% endif %}
                 </div>
-                <!-- Quiz Type Field -->
-                <div class="col-md-6">
-                    <label id="quiz_type" class="form-label fw-semibold">Quiz Type</label>
-                    {{ form.quiz_type }}
-                </div>
+
                 <!-- Due Date Field -->
                 <div class="col-md-6">
                     <label for="due_date" class="form-label fw-semibold">Due Date</label>
-                    <input type="datetime-local" id="due_date" name="due_date" class="form-control" required>
+                    <input type="datetime-local" id="due_date" name="due_date" class="form-control"
+                        value="{{ form.due_date.value|default:'' }}" required>
+                    {% if form.due_date.errors %}
+                        <div class="text-danger">{{ form.due_date.errors|join:', ' }}</div>
+                    {% endif %}
                 </div>
 
+                <!-- Timer Field -->
                 <div class="col-md-6">
-                    <label for="quiz_timer" class="form-label fw-semibold">Quiz Timer (in minutes)</label>
-                    <input type="number" id="quiz_timer" name="timer" class="form-control" placeholder="Enter duration in minutes" min="1" required>
+                    <label for="timer" class="form-label fw-semibold">Quiz Timer (in minutes)</label>
+                    <input type="number" id="timer" name="timer" class="form-control"
+                        value="{{ form.timer.value|default:'' }}"
+                        placeholder="Enter duration in minutes" min="1" required>
+                    {% if form.timer.errors %}
+                        <div class="text-danger">{{ form.timer.errors|join:', ' }}</div>
+                    {% endif %}
                 </div>
 
                 <!-- Description Field -->
                 <div class="col-12">
-                    <label id="description" class="form-label fw-semibold">Description</label>
-                    {{ form.description }}
+                    <label for="description" class="form-label fw-semibold">Description</label>
+                    <textarea id="description" name="description" class="form-control"
+                        rows="4" placeholder="Enter Quiz Description (optional)">
+                        {{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors|join:', ' }}</div>
+                    {% endif %}
                 </div>
 
                 <!-- Add Question Button -->
@@ -58,14 +75,15 @@
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
                         Add Question
                     </button>
-                    <!-- Load Existing Questions Button -->
-                    <button type="button" class="btn btn-secondary" id="loadExistingQuestionsBtn" data-bs-toggle="modal" data-bs-target="#existingQuestionsModal">
+                    <button type="button" class="btn btn-secondary" id="loadExistingQuestionsBtn"
+                        data-bs-toggle="modal" data-bs-target="#existingQuestionsModal">
                         Load Existing Questions
                     </button>
                 </div>
 
                 <!-- Existing Questions Modal -->
-                <div class="modal fade" id="existingQuestionsModal" tabindex="-1" aria-labelledby="existingQuestionsModalLabel" aria-hidden="true">
+                <div class="modal fade" id="existingQuestionsModal" tabindex="-1"
+                    aria-labelledby="existingQuestionsModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -89,7 +107,6 @@
                             No questions added yet.
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Submit and Cancel Buttons -->
@@ -111,32 +128,25 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Add Question Form -->
                 <form id="addQuestionForm">
                     <div class="mb-3">
                         <label for="question_text" class="form-label">Question Text</label>
                         <input type="text" id="question_text" class="form-control" placeholder="Enter question text">
                     </div>
-
-                    <!-- Multiple Choice Options -->
-                    <div class="mb-3" id="optionsContainer">
-                        <!-- Options will be added here -->
-                        <div class="d-flex mb-2">
-                            <input type="text" class="form-control me-2 option-input" placeholder="Enter option">
-                            <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
-                        </div>
-                    </div>
-
-                    <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">Add Option</button>
-
-                    <!-- Correct Answer -->
                     <div class="mb-3">
-                        <label for="answer" class="form-label">Correct Answer</label>
-                        <input type="text" id="answer" class="form-control" placeholder="Enter correct answer">
+                        <label for="question_type" class="form-label">Question Type</label>
+                        <select id="question_type" class="form-select">
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="true_false">True/False</option>
+                            <option value="identification">Identification</option>
+                        </select>
                     </div>
-
+                    <!-- Dynamic Fields for Question Type -->
+                    <div id="questionTypeSpecificFields">
+                        <!-- Specific fields will be rendered dynamically here -->
+                    </div>
                     <div class="text-end">
-                        <button type="button" class="btn btn-success" id="saveQuestionBtn">Add Question</button>
+                        <button type="button" class="btn btn-success" id="saveQuestionBtn">Save Question</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </form>
@@ -145,251 +155,9 @@
     </div>
 </div>
 
-
-<!-- JavaScript for Adding Question From Databank -->
-<script src="{% static 'js/loadExistingQuestion.js' %}"></script>
-<script src="{% static 'js/questionStaging.js' %}"></script>
-<script src="{% static 'js/quizTimer.js' %}"></script>
-
-<!-- JavaScript for Adding Questions Dynamically -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const loadExistingQuestionsBtn = document.getElementById('loadExistingQuestionsBtn');
-    const existingQuestionsList = document.getElementById('existingQuestionsList');
-    const questionsList = document.getElementById('questionsList');
-    const saveQuestionBtn = document.getElementById('saveQuestionBtn');
-    const questionTextInput = document.getElementById('question_text');
-    const answerInput = document.getElementById('answer');
-    const optionsContainer = document.getElementById('optionsContainer');
-    const addOptionBtn = document.getElementById('addOptionBtn');
-
-    let stagedQuestions = []; // Array to track added questions
-
-    // Fetch existing questions from the server and render them
-    loadExistingQuestionsBtn.addEventListener('click', () => {
-        fetch('/get-questions/') // Ensure the URL matches your Django URLs
-            .then(response => response.json())
-            .then(data => renderExistingQuestions(data.questions))
-            .catch(error => console.error('Error fetching questions:', error));
-    });
-
-    // Render the existing questions in the modal
-    function renderExistingQuestions(questions) {
-        // Clear the existing list
-        existingQuestionsList.innerHTML = '';
-
-        if (!questions || questions.length === 0) {
-            // Handle the case where there are no questions
-            const emptyMessage = document.createElement('p');
-            emptyMessage.classList.add('text-muted', 'text-center');
-            emptyMessage.textContent = 'No questions available.';
-            existingQuestionsList.appendChild(emptyMessage);
-            return;
-        }
-
-        // Iterate through the list of questions
-        questions.forEach(question => {
-            try {
-                // Create a list item for each question
-                const listItem = document.createElement('li');
-                listItem.classList.add('list-group-item');
-
-                listItem.innerHTML = `
-                    <div>
-                        <p><strong>Question:</strong> ${question.question_text}</p>
-                        <p><strong>Type:</strong> ${formatQuestionType(question.question_type)}</p>
-                        ${question.multiple_choice_options?.length ? `
-                            <p><strong>Options:</strong></p>
-                            <ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>
-                        ` : ''}
-                        <p><strong>Correct Answer(s):</strong> ${
-                            question.correct_answers?.length
-                                ? `<ul>${question.correct_answers.map(answer => `<li>${answer}</li>`).join('')}</ul>`
-                                : '<span class="text-muted">N/A</span>'
-                        }</p>
-                        <button type="button" class="btn btn-primary btn-sm addQuestionBtn">Add</button>
-                    </div>
-                `;
-
-                // Attach event listener to the "Add" button
-                const addButton = listItem.querySelector('.addQuestionBtn');
-                addButton.addEventListener('click', () => {
-                    addQuestionToQuiz(question);
-                });
-
-                // Append the list item to the existing questions list
-                existingQuestionsList.appendChild(listItem);
-            } catch (error) {
-                console.error('Error rendering question:', question, error);
-            }
-        });
-    }
-
-            document.getElementById('quizForm').addEventListener('submit', (e) => {
-            if (stagedQuestions.length === 0) {
-                e.preventDefault();
-                alert("Please add at least one question before submitting the quiz.");
-                return;
-            }
-
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = 'questions';
-            hiddenField.value = JSON.stringify(stagedQuestions); // Convert questions to JSON
-            console.log("Submitting Questions:", stagedQuestions); // Debug log
-            document.getElementById('quizForm').appendChild(hiddenField);
-        });
-
-    // Add a question to the "Questions Added" section
-       function addQuestionToQuiz(question) {
-        if (stagedQuestions.some(q => q.id === question.id)) {
-            alert("This question has already been added.");
-            return;
-        }
-
-        stagedQuestions.push(question); // Add question to the stagedQuestions array
-        console.log("Staged Questions:", stagedQuestions); // Debug log
-
-        const questionCard = document.createElement('div');
-        questionCard.classList.add('card', 'border-0', 'shadow-sm', 'p-3', 'mb-2');
-
-        questionCard.innerHTML = `
-            <div class="card-body">
-                <h6 class="card-title">${question.question_text}</h6>
-                <p class="card-text">
-                    <strong>Type:</strong> ${formatQuestionType(question.question_type)}<br>
-                    ${question.multiple_choice_options?.length
-                        ? `<strong>Options:</strong><ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>`
-                        : ''}
-                    <strong>Correct Answer(s):</strong> ${
-                        question.correct_answers?.length
-                            ? `<ul>${question.correct_answers.map(answer => `<li>${answer}</li>`).join('')}</ul>`
-                            : 'N/A'
-                    }
-                </p>
-                <button type="button" class="btn btn-danger btn-sm removeQuestionBtn">Remove</button>
-            </div>
-        `;
-
-        questionCard.querySelector('.removeQuestionBtn').addEventListener('click', () => {
-            stagedQuestions = stagedQuestions.filter(q => q.id !== question.id);
-            questionCard.remove();
-            console.log("Staged Questions after removal:", stagedQuestions); // Debug log
-            toggleNoQuestionsMessage();
-            alert(`Question "${question.question_text}" removed from the quiz.`);
-        });
-
-        questionsList.appendChild(questionCard);
-        toggleNoQuestionsMessage(); // Update the empty state message visibility
-    }
-
-    // Add a question to the UI
-    function addQuestionToUI(question) {
-        const questionCard = document.createElement('div');
-        questionCard.classList.add('card', 'border-0', 'shadow-sm', 'p-3', 'mb-2');
-
-        questionCard.innerHTML = `
-            <div class="card-body">
-                <h6 class="card-title">${question.question_text}</h6>
-                <p class="card-text">
-                    <strong>Type:</strong> ${formatQuestionType(question.question_type)}
-                </p>
-                ${question.multiple_choice_options?.length ? `
-                    <p><strong>Options:</strong></p>
-                    <ul>${question.multiple_choice_options.map(option => `<li>${option}</li>`).join('')}</ul>
-                ` : ''}
-                <p><strong>Correct Answer(s):</strong> ${
-                    question.correct_answer?.length
-                        ? `<ul>${question.correct_answer.map(answer => `<li>${answer}</li>`).join('')}</ul>`
-                        : '<span class="text-muted">N/A</span>'
-                }</p>
-                <button type="button" class="btn btn-danger btn-sm removeQuestionBtn">Remove</button>
-            </div>
-        `;
-
-        questionCard.querySelector('.removeQuestionBtn').addEventListener('click', () => {
-            stagedQuestions = stagedQuestions.filter(q => q.id !== question.id);
-            questionCard.remove();
-            alert(`Question removed from the quiz.`);
-            toggleNoQuestionsMessage();
-        });
-
-        questionsList.appendChild(questionCard);
-        toggleNoQuestionsMessage();
-    }
-
-    // Save manually added question
-    saveQuestionBtn.addEventListener('click', () => {
-        const questionText = questionTextInput.value.trim();
-        const options = Array.from(document.querySelectorAll('.option-input'))
-            .map(input => input.value.trim())
-            .filter(option => option !== '');
-        const correctAnswer = answerInput.value.trim();
-
-        if (!questionText || !correctAnswer) {
-            alert("Please fill out the question text and correct answer.");
-            return;
-        }
-
-        const newQuestion = {
-            id: `temp-${Date.now()}`,
-            question_text: questionText,
-            question_type: 'multiple_choice',
-            multiple_choice_options: options,
-            correct_answer: [correctAnswer],
-        };
-
-        stagedQuestions.push(newQuestion); // Add to stagedQuestions
-        addQuestionToUI(newQuestion); // Render the question in the UI
-
-        // Reset form fields
-        questionTextInput.value = '';
-        answerInput.value = '';
-        optionsContainer.innerHTML = '';
-        toggleNoQuestionsMessage();
-
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
-        modal.hide();
-    });
-
-    // Add option logic
-    addOptionBtn.addEventListener('click', () => {
-        const optionWrapper = document.createElement('div');
-        optionWrapper.classList.add('d-flex', 'mb-2');
-        optionWrapper.innerHTML = `
-            <input type="text" class="form-control me-2 option-input" placeholder="Enter option">
-            <button type="button" class="btn btn-danger btn-sm removeOption">Remove</button>
-        `;
-        optionWrapper.querySelector('.removeOption').addEventListener('click', () => optionWrapper.remove());
-        optionsContainer.appendChild(optionWrapper);
-    });
-
-    // Format the question type for display
-    function formatQuestionType(type) {
-        switch (type) {
-            case 'multiple_choice': return 'Multiple Choice';
-            case 'true_false': return 'True/False';
-            case 'identification': return 'Identification';
-            default: return 'Unknown Type';
-        }
-    }
-
-    // Show or hide the "No questions added yet" message
-    function toggleNoQuestionsMessage() {
-        const noQuestionsMessage = document.querySelector('.no-questions-message');
-        if (!noQuestionsMessage) return; // Exit if the element doesn't exist
-
-        if (stagedQuestions.length === 0) {
-            noQuestionsMessage.style.display = 'block';
-        } else {
-            noQuestionsMessage.style.display = 'none';
-        }
-    }
-
-    toggleNoQuestionsMessage(); // Initialize message visibility
-});
-</script>
-
+<!-- Include JavaScript Files -->
+<script src="{% static 'js/add_question.js' %}"></script>
+<script src="{% static 'js/load_questions.js' %}"></script>
+<script src="{% static 'js/shared_questions.js' %}"></script>
 
 {% endblock %}
