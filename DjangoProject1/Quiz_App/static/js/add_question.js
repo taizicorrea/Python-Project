@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
         timerProgressBar: true
     });
 
+    // Set default question type to "Multiple Choice"
+    questionTypeDropdown.value = 'multiple_choice';
+    renderQuestionFields('multiple_choice'); // Render fields for "Multiple Choice" by default
+
     // Handle question type changes
     questionTypeDropdown.addEventListener('change', () => {
         renderQuestionFields(questionTypeDropdown.value);
@@ -93,75 +97,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save question
     saveQuestionBtn.addEventListener('click', () => {
-    const questionTextInput = document.getElementById('question_text');
-    const questionText = questionTextInput.value.trim();
-    const questionType = questionTypeDropdown.value;
+        const questionTextInput = document.getElementById('question_text');
+        const questionText = questionTextInput.value.trim();
+        const questionType = questionTypeDropdown.value;
 
-    let correctAnswers = [];
-    let options = [];
+        let correctAnswers = [];
+        let options = [];
 
-    // Validate fields based on question type
-    if (questionType === 'identification') {
-        correctAnswers = Array.from(document.querySelectorAll('.answer-input'))
-            .map(input => input.value.trim())
-            .filter(answer => answer !== '');
-    } else if (questionType === 'multiple_choice') {
-        options = Array.from(document.querySelectorAll('.option-input'))
-            .map(input => input.value.trim())
-            .filter(option => option !== '');
-        correctAnswers = [document.getElementById('correct_answer').value.trim()];
-    } else if (questionType === 'true_false') {
-        correctAnswers = [document.getElementById('correct_answer').value.trim()];
-    }
-
-    // Check for required fields
-    if (!questionText || correctAnswers.length === 0 || (questionType === 'multiple_choice' && options.length === 0)) {
-        Toast.fire({
-            icon: 'error',
-            title: 'Please fill out all required fields!'
-        });
-        return;
-    }
-
-    const newQuestion = {
-        id: `temp-${Date.now()}`,
-        question_text: questionText,
-        question_type: questionType,
-        multiple_choice_options: options,
-        correct_answers: correctAnswers,
-    };
-
-    try {
-        const success = addSharedQuestion(newQuestion); // Adjusted to return success/failure
-
-        if (success) {
-            Toast.fire({
-                icon: 'success',
-                title: 'Question added successfully!'
-            });
-        } else {
-            throw new Error('Duplicate question detected.');
+        // Validate fields based on question type
+        if (questionType === 'identification') {
+            correctAnswers = Array.from(document.querySelectorAll('.answer-input'))
+                .map(input => input.value.trim())
+                .filter(answer => answer !== '');
+        } else if (questionType === 'multiple_choice') {
+            options = Array.from(document.querySelectorAll('.option-input'))
+                .map(input => input.value.trim())
+                .filter(option => option !== '');
+            correctAnswers = [document.getElementById('correct_answer').value.trim()];
+        } else if (questionType === 'true_false') {
+            correctAnswers = [document.getElementById('correct_answer').value.trim()];
         }
-    } catch (error) {
-        console.error('Error saving question:', error);
-        Toast.fire({
-            icon: 'error',
-            title: error.message || 'An unexpected error occurred while saving the question.'
-        });
-    }
 
-    // Reset fields after adding a question
-    questionTextInput.value = '';
-    if (questionType === 'multiple_choice') {
-        document.getElementById('optionsContainer').innerHTML = '';
-    } else if (questionType === 'identification') {
-        document.getElementById('answersContainer').innerHTML = '';
-    }
+        // Check for required fields
+        if (!questionText || correctAnswers.length === 0 || (questionType === 'multiple_choice' && options.length === 0)) {
+            Toast.fire({
+                icon: 'error',
+                title: 'Please fill out all required fields!'
+            });
+            return;
+        }
 
-    // Hide modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
-    modal.hide();
-});
+        const newQuestion = {
+            id: `temp-${Date.now()}`,
+            question_text: questionText,
+            question_type: questionType,
+            multiple_choice_options: options,
+            correct_answers: correctAnswers,
+        };
+
+        try {
+            const success = addSharedQuestion(newQuestion); // Adjusted to return success/failure
+
+            if (success) {
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Question added successfully!'
+                });
+            } else {
+                throw new Error('Duplicate question detected.');
+            }
+        } catch (error) {
+            console.error('Error saving question:', error);
+            Toast.fire({
+                icon: 'error',
+                title: error.message || 'An unexpected error occurred while saving the question.'
+            });
+        }
+
+        // Reset fields after adding a question
+        questionTextInput.value = '';
+        if (questionType === 'multiple_choice') {
+            document.getElementById('optionsContainer').innerHTML = '';
+        } else if (questionType === 'identification') {
+            document.getElementById('answersContainer').innerHTML = '';
+        }
+
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
+        modal.hide();
+    });
+
+    addQuestionModal.addEventListener('hidden.bs.modal', () => {
+        document.getElementById('question_text').value = '';
+        questionTypeDropdown.value = 'multiple_choice';
+        renderQuestionFields('multiple_choice'); // Reset fields for "Multiple Choice"
+    });
 
     // Ensure "No Questions" message updates on load
     toggleNoQuestionsMessage();

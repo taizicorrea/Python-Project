@@ -30,9 +30,8 @@
                 <!-- Title Field -->
                 <div class="col-12">
                     <label for="title" class="form-label fw-semibold">Title</label>
-                    <input type="text" id="title" name="title" class="form-control"
-                        value="{{ form.title.value|default:'' }}"
-                        placeholder="Enter Quiz Title" required>
+                    <textarea id="title" name="title" class="form-control auto-expand"
+                              placeholder="Enter Quiz Title" maxlength="255"></textarea>
                     {% if form.title.errors %}
                         <div class="text-danger">{{ form.title.errors|join:', ' }}</div>
                     {% endif %}
@@ -63,8 +62,7 @@
                 <div class="col-12">
                     <label for="description" class="form-label fw-semibold">Description</label>
                     <textarea id="description" name="description" class="form-control"
-                        rows="4" placeholder="Enter Quiz Description (optional)">
-                        {{ form.description.value|default:'' }}</textarea>
+                        rows="4" placeholder="Enter Quiz Description (optional)">{% if form.description.value %}{{ form.description.value }}{% endif %}</textarea>
                     {% if form.description.errors %}
                         <div class="text-danger">{{ form.description.errors|join:', ' }}</div>
                     {% endif %}
@@ -119,7 +117,6 @@
     </div>
 </div>
 
-<!-- Add Question Modal -->
 <div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -131,7 +128,7 @@
                 <form id="addQuestionForm">
                     <div class="mb-3">
                         <label for="question_text" class="form-label">Question Text</label>
-                        <input type="text" id="question_text" class="form-control" placeholder="Enter question text">
+                        <textarea id="question_text" class="form-control auto-expand" placeholder="Enter question text" rows="1"></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="question_type" class="form-label">Question Type</label>
@@ -155,9 +152,56 @@
     </div>
 </div>
 
+
 <!-- Include JavaScript Files -->
 <script src="{% static 'js/add_question.js' %}"></script>
 <script src="{% static 'js/load_questions.js' %}"></script>
 <script src="{% static 'js/shared_questions.js' %}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const autoExpandAreas = document.querySelectorAll('textarea.auto-expand');
+
+    autoExpandAreas.forEach((textarea) => {
+        // Adjust height on input
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto'; // Reset height to calculate properly
+            textarea.style.height = `${textarea.scrollHeight}px`; // Set height based on content
+        });
+
+        // Adjust height on page load
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    });
+});
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // Add auto-expand functionality
+    const autoExpandAreas = document.querySelectorAll('textarea.auto-expand');
+
+    autoExpandAreas.forEach((textarea) => {
+        // Adjust height on input
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto'; // Reset height to calculate properly
+            textarea.style.height = `${textarea.scrollHeight}px`; // Set height based on content
+        });
+
+        // Adjust height on page load
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    });
+
+    // Ensure auto-expand resets when modal is hidden
+    const modal = document.getElementById('addQuestionModal');
+    modal.addEventListener('hidden.bs.modal', () => {
+        autoExpandAreas.forEach((textarea) => {
+            textarea.value = ''; // Clear the content
+            textarea.style.height = 'auto'; // Reset the height
+        });
+    });
+});
+</script>
 
 {% endblock %}

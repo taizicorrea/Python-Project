@@ -194,3 +194,26 @@
 #questionsList::-webkit-scrollbar-track {
     background-color: #f1f4f8;
 }
+
+/* Remove scrollbar and ensure textarea auto-expands */
+textarea.auto-expand {
+    overflow: hidden; /* Hides the scrollbar */
+    resize: none; /* Prevents manual resizing */
+    min-height: 38px; /* Default height */
+    max-height: 200px; /* Optional maximum height */
+    line-height: 1.5; /* Readability */
+    padding: 10px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+textarea.auto-expand:focus {
+    border-color: #457b9d; /* Border color on focus */
+    box-shadow: 0 0 4px rgba(69, 123, 157, 0.5);
+}
+
+
+
