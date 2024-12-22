@@ -11,6 +11,7 @@
     <a href="{% url 'landing' %}?classroom_id={{ classroom.id }}" class="btn btn-outline-secondary mb-3">
         <i class="bi bi-arrow-left"></i> Back to Classroom
     </a>
+
     <!-- Classroom Banner -->
     <div class="p-4 text-white rounded-3 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4caf50, #81c784);">
         <h4 class="mb-1">{{ classroom.class_name }} ({{ classroom.section }})</h4>
@@ -31,7 +32,8 @@
                 <div class="col-12">
                     <label for="title" class="form-label fw-semibold">Title</label>
                     <textarea id="title" name="title" class="form-control auto-expand"
-                              placeholder="Enter Quiz Title" maxlength="255"></textarea>
+                              placeholder="Enter Quiz Title" maxlength="255"
+                              aria-label="Enter quiz title"></textarea>
                     {% if form.title.errors %}
                         <div class="text-danger">{{ form.title.errors|join:', ' }}</div>
                     {% endif %}
@@ -41,7 +43,7 @@
                 <div class="col-md-6">
                     <label for="due_date" class="form-label fw-semibold">Due Date</label>
                     <input type="datetime-local" id="due_date" name="due_date" class="form-control"
-                        value="{{ form.due_date.value|default:'' }}" required>
+                           value="{{ form.due_date.value|default:'' }}" required>
                     {% if form.due_date.errors %}
                         <div class="text-danger">{{ form.due_date.errors|join:', ' }}</div>
                     {% endif %}
@@ -51,8 +53,8 @@
                 <div class="col-md-6">
                     <label for="timer" class="form-label fw-semibold">Quiz Timer (in minutes)</label>
                     <input type="number" id="timer" name="timer" class="form-control"
-                        value="{{ form.timer.value|default:'' }}"
-                        placeholder="Enter duration in minutes" min="1" required>
+                           value="{{ form.timer.value|default:'' }}"
+                           placeholder="Enter duration in minutes" min="1" required>
                     {% if form.timer.errors %}
                         <div class="text-danger">{{ form.timer.errors|join:', ' }}</div>
                     {% endif %}
@@ -61,40 +63,23 @@
                 <!-- Description Field -->
                 <div class="col-12">
                     <label for="description" class="form-label fw-semibold">Description</label>
-                    <textarea id="description" name="description" class="form-control"
-                        rows="4" placeholder="Enter Quiz Description (optional)">{% if form.description.value %}{{ form.description.value }}{% endif %}</textarea>
+                    <textarea id="description" name="description" class="form-control auto-expand" rows="4"
+                              placeholder="Enter Quiz Description (optional)"
+                              aria-label="Enter quiz description">{% if form.description.value %}{{ form.description.value }}{% endif %}</textarea>
                     {% if form.description.errors %}
                         <div class="text-danger">{{ form.description.errors|join:', ' }}</div>
                     {% endif %}
                 </div>
 
-                <!-- Add Question Button -->
+                <!-- Add Question Buttons -->
                 <div class="col-12">
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
                         Add Question
                     </button>
                     <button type="button" class="btn btn-secondary" id="loadExistingQuestionsBtn"
-                        data-bs-toggle="modal" data-bs-target="#existingQuestionsModal">
+                            data-bs-toggle="modal" data-bs-target="#existingQuestionsModal">
                         Load Existing Questions
                     </button>
-                </div>
-
-                <!-- Existing Questions Modal -->
-                <div class="modal fade" id="existingQuestionsModal" tabindex="-1"
-                    aria-labelledby="existingQuestionsModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="existingQuestionsModalLabel">Existing Questions</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <ul id="existingQuestionsList" class="list-group">
-                                    <!-- Questions will be dynamically loaded here -->
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Questions Preview -->
@@ -117,6 +102,7 @@
     </div>
 </div>
 
+<!-- Add Question Modal -->
 <div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -128,7 +114,8 @@
                 <form id="addQuestionForm">
                     <div class="mb-3">
                         <label for="question_text" class="form-label">Question Text</label>
-                        <textarea id="question_text" class="form-control auto-expand" placeholder="Enter question text" rows="1"></textarea>
+                        <textarea id="question_text" class="form-control auto-expand"
+                                  placeholder="Enter question text" rows="1" aria-label="Enter question text"></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="question_type" class="form-label">Question Type</label>
@@ -138,9 +125,8 @@
                             <option value="identification">Identification</option>
                         </select>
                     </div>
-                    <!-- Dynamic Fields for Question Type -->
                     <div id="questionTypeSpecificFields">
-                        <!-- Specific fields will be rendered dynamically here -->
+                        <!-- Dynamic fields will be rendered here -->
                     </div>
                     <div class="text-end">
                         <button type="button" class="btn btn-success" id="saveQuestionBtn">Save Question</button>
@@ -152,40 +138,20 @@
     </div>
 </div>
 
-
 <!-- Include JavaScript Files -->
 <script src="{% static 'js/add_question.js' %}"></script>
 <script src="{% static 'js/load_questions.js' %}"></script>
 <script src="{% static 'js/shared_questions.js' %}"></script>
 
+<!-- Auto-expand Script -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const autoExpandAreas = document.querySelectorAll('textarea.auto-expand');
 
     autoExpandAreas.forEach((textarea) => {
-        // Adjust height on input
         textarea.addEventListener('input', () => {
-            textarea.style.height = 'auto'; // Reset height to calculate properly
-            textarea.style.height = `${textarea.scrollHeight}px`; // Set height based on content
-        });
-
-        // Adjust height on page load
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-    });
-});
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-    // Add auto-expand functionality
-    const autoExpandAreas = document.querySelectorAll('textarea.auto-expand');
-
-    autoExpandAreas.forEach((textarea) => {
-        // Adjust height on input
-        textarea.addEventListener('input', () => {
-            textarea.style.height = 'auto'; // Reset height to calculate properly
-            textarea.style.height = `${textarea.scrollHeight}px`; // Set height based on content
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
         });
 
         // Adjust height on page load
@@ -193,15 +159,5 @@ document.addEventListener('DOMContentLoaded', () => {
         textarea.style.height = `${textarea.scrollHeight}px`;
     });
 
-    // Ensure auto-expand resets when modal is hidden
-    const modal = document.getElementById('addQuestionModal');
-    modal.addEventListener('hidden.bs.modal', () => {
-        autoExpandAreas.forEach((textarea) => {
-            textarea.value = ''; // Clear the content
-            textarea.style.height = 'auto'; // Reset the height
-        });
-    });
-});
 </script>
-
 {% endblock %}
