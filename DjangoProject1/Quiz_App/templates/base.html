@@ -17,11 +17,11 @@
 </head>
 <body>
     <!-- Header Navbar -->
-    <div class="header d-flex justify-content-between align-items-center p-3">
+    <div class="header d-flex justify-content-between align-items-center p-3 bg-white text-dark shadow-sm"
         <!-- Left Section: Logo and Title -->
         <div class="d-flex align-items-center">
-            <img src="{% static 'images/BulSULogo.png' %}" alt="Logo" class="me-2" style="height: 40px;">
-            <h5 class="mb-0">BulSU Classroom</h5>
+            <img src="{% static 'images/BulSULogo.png' %}" alt="Logo" class="me-3 rounded-circle" style="height: 50px;">
+            <h4 class="mb-0 fw-bold">BulSU Classroom</h4>
         </div>
 
         <!-- Right Section: Plus Icon and Profile -->
@@ -29,9 +29,9 @@
             <!-- Profile Dropdown -->
             <div class="dropdown">
                 <button class="btn p-0 border-0 bg-transparent" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="{% static 'images/user_avatar.png' %}" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px;">
+                    <img src="{% static 'images/user_avatar.png' %}" alt="Profile" class="rounded-circle border border-light" style="width: 45px; height: 45px;">
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="profileDropdown">
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">Profile</a></li>
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
@@ -44,6 +44,11 @@
         {% block content %}
         {% endblock %}
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-white text-dark text-center py-3 mt-5">
+        <p class="mb-0">Powered by BatiBoys BSIT 4F-G2</p>
+    </footer>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>

@@ -4,6 +4,7 @@ import json
 import string
 from io import BytesIO
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.template.loader import render_to_string
 from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
@@ -13,11 +14,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from django.urls import reverse
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
 from weasyprint import HTML
 from django.templatetags.static import static
 
 from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
-    PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm
+    PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm, EditQuestionForm
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom, Quiz, Question, StudentQuizScore
@@ -465,6 +467,24 @@ def add_question(request):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
+def edit_question(request, question_id):
+    question = get_object_or_404(Question, id=question_id)
+    if request.method == 'POST':
+        form = EditQuestionForm(request.POST, instance=question)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Question updated successfully!')
+            return redirect('edit_quiz', quiz_id=question.quizzes.first().id)  # Assuming a question belongs to one quiz
+    else:
+        form = EditQuestionForm(instance=question)
+
+    return render(request, 'Quiz_App/edit_question.html', {'form': form, 'question': question})
+
+def delete_question(request, question_id):
+    question = get_object_or_404(Question, id=question_id)
+    quiz_id = question.quizzes.first().id
+    question.delete()
+    return redirect('edit_quiz', quiz_id=quiz_id)
 
 @login_required
 def take_quiz(request, quiz_id):
@@ -630,7 +650,7 @@ def manage_quiz(request, quiz_id):
     if request.user != quiz.classroom.teacher:
         return HttpResponseForbidden("You are not authorized to manage this quiz.")
 
-    # Handle form actions (enable/disable/delete)
+    # Handle form actions
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "disable":
@@ -646,21 +666,53 @@ def manage_quiz(request, quiz_id):
             messages.success(request, "Quiz has been deleted.")
             return redirect("landing")
 
-    # Fetch student scores and calculate percentages
+    # Fetch student scores
     student_scores = []
-    for score in StudentQuizScore.objects.filter(quiz=quiz):
+    scores_queryset = StudentQuizScore.objects.filter(quiz=quiz)
+    for score in scores_queryset:
         percentage = (score.score / score.total_questions) * 100 if score.total_questions > 0 else 0
         student_scores.append({
             "student": score.student,
             "score": score.score,
             "total_questions": score.total_questions,
-            "percentage": round(percentage, 2),  # Rounded to 2 decimal places
+            "percentage": round(percentage, 2),
         })
+
+    # Calculate quiz-level analytics
+    total_scores = [score['score'] for score in student_scores]
+    total_participants = len(student_scores)
+    average_score = sum(total_scores) / total_participants if total_participants > 0 else 0
+    highest_score = max(total_scores, default=0)
+    lowest_score = min(total_scores, default=0)
+
+    # Calculate per-question analytics
+    questions = quiz.questions.all()
+    for question in questions:
+        correct_responses = question.responses.filter(is_correct=True).count()
+        incorrect_responses = question.responses.filter(is_correct=False).count()
+        total_responses = correct_responses + incorrect_responses
+
+        # Debugging logs
+        print(f"Question: {question.question_text}")
+        print(f"Correct: {correct_responses}, Incorrect: {incorrect_responses}, Total: {total_responses}")
+
+        question.correct_answers = correct_responses
+        question.incorrect_answers = incorrect_responses
+        question.success_rate = (correct_responses / total_responses * 100) if total_responses > 0 else 0
 
     return render(request, "Quiz_App/manage_quiz.html", {
         "quiz": quiz,
         "student_scores": student_scores,
+        "questions": questions,
+        "quiz_analytics": {
+            "average_score": round(average_score, 2),
+            "highest_score": highest_score,
+            "lowest_score": lowest_score,
+            "total_participants": total_participants,
+        },
     })
+
+
 
 @login_required
 def edit_quiz(request, quiz_id):
@@ -680,3 +732,44 @@ def edit_quiz(request, quiz_id):
         form = QuizForm(instance=quiz)
 
     return render(request, 'Quiz_App/edit_quiz.html', {'form': form, 'quiz': quiz})
+
+@csrf_exempt
+def save_question(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            quiz_id = data.get('quizId')
+            question_id = data.get('questionId')
+            question_text = data.get('question_text')
+            question_type = data.get('question_type')
+            options = data.get('options', [])
+            correct_answers = data.get('correct_answers', '')
+
+            if not quiz_id or not question_text or not question_type:
+                return JsonResponse({'success': False, 'error': 'Required fields are missing'}, status=400)
+
+            quiz = Quiz.objects.get(id=quiz_id)
+
+            if question_id:  # Update existing question
+                question = Question.objects.get(id=question_id)
+                question.question_text = question_text
+                question.question_type = question_type
+                question.multiple_choice_options = "\n".join(options) if options else ""
+                question.correct_answers = correct_answers
+                question.save()
+            else:  # Create a new question
+                question = Question.objects.create(
+                    question_text=question_text,
+                    question_type=question_type,
+                    multiple_choice_options="\n".join(options) if options else "",
+                    correct_answers=correct_answers,
+                )
+                question.quizzes.add(quiz)  # Associate the question with the quiz
+
+            return JsonResponse({'success': True})
+        except Quiz.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Quiz not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)

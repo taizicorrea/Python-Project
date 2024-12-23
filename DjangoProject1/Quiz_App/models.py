@@ -132,3 +132,12 @@ class StudentQuizScore(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.quiz.title} - {self.score}/{self.total_questions}"
+
+class Response(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="responses")
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    answer = models.TextField()
+    is_correct = models.BooleanField()
+
+    def __str__(self):
+        return f"Response to '{self.question}' by {self.student.username}"

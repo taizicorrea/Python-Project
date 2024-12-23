@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Profile, Classroom
+from .models import Profile, Classroom, Question
 from .models import Quiz
 from django.utils.timezone import now
 
@@ -293,3 +293,49 @@ class QuestionForm(forms.Form):
                 raise forms.ValidationError("You must provide the correct answer for an identification question.")
 
         return cleaned_data
+
+class BaseQuestionForm(forms.ModelForm):
+    class Meta:
+        model = Question
+        fields = ['question_text', 'question_type', 'multiple_choice_options', 'correct_answers']
+        widgets = {
+            'question_text': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter the question text'
+            }),
+            'question_type': forms.Select(attrs={
+                'class': 'form-select',
+                'onchange': 'toggleOptions(this)'  # Custom JS to toggle options
+            }),
+            'multiple_choice_options': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter each option on a new line',
+                'rows': 4
+            }),
+            'correct_answers': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter correct answers (comma-separated for multiple)',
+                'rows': 2
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        question_type = cleaned_data.get('question_type')
+        multiple_choice_options = cleaned_data.get('multiple_choice_options')
+        correct_answers = cleaned_data.get('correct_answers')
+
+        if question_type == 'multiple_choice' and not multiple_choice_options:
+            raise ValidationError("Multiple choice questions must have options.")
+        if not correct_answers:
+            raise ValidationError("Please provide correct answer(s).")
+        return cleaned_data
+
+class AddQuestionForm(BaseQuestionForm):
+    pass  # No additional logic required for adding
+
+class EditQuestionForm(BaseQuestionForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.question_type == 'true_false':
+            self.fields['multiple_choice_options'].widget = forms.HiddenInput()

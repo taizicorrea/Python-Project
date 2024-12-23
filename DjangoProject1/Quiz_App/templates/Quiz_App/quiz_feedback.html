@@ -3,24 +3,51 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h3>{{ quiz.title }}</h3>
-    <p>Your Score: {{ score }}/{{ total }}</p>
+    <!-- Quiz Title and Score Highlight -->
+    <div class="text-center mb-4">
+        <h3 class="mb-3">{{ quiz.title }}</h3>
+        <div class="alert alert-info d-inline-block p-4 shadow-sm">
+            <h2 class="mb-0">Your Score: <span class="text-primary fw-bold">{{ score }}</span> / {{ total }}</h2>
+        </div>
+    </div>
     <hr>
+
+    <!-- Feedback for each question -->
     {% for item in feedback %}
-    <div class="card mb-3">
+    <div class="card mb-3 shadow-sm">
         <div class="card-body">
-            <p><strong>Q: {{ item.question }}</strong></p>
-            <p>Your Answer: <strong>{{ item.user_answer|default:"No Answer" }}</strong></p>
-            <p>Correct Answer(s): <strong>{{ item.correct_answers|join:", " }}</strong></p>
+            <h5 class="fw-bold">Q: {{ item.question }}</h5>
+            <p class="mb-2">
+                <span class="fw-bold">Your Answer:</span>
+                {% if item.is_correct %}
+                <span class="text-success">{{ item.user_answer|default:"No Answer" }}</span>
+                {% else %}
+                <span class="text-danger">{{ item.user_answer|default:"No Answer" }}</span>
+                {% endif %}
+            </p>
+            <p>
+                <span class="fw-bold">Correct Answer(s):</span>
+                <span class="text-primary">{{ item.correct_answers|join:", " }}</span>
+            </p>
             {% if item.is_correct %}
-            <p class="text-success">Correct</p>
+            <div class="text-success fw-bold mt-2">
+                <i class="bi bi-check-circle-fill"></i> Correct
+            </div>
             {% else %}
-            <p class="text-danger">Incorrect</p>
+            <div class="text-danger fw-bold mt-2">
+                <i class="bi bi-x-circle-fill"></i> Incorrect
+            </div>
             {% endif %}
         </div>
     </div>
     {% endfor %}
     <hr>
-    <a href="{% url 'landing' %}" class="btn btn-secondary">Back to Classroom</a>
+
+    <!-- Back to Classroom Button -->
+    <div class="text-center">
+        <a href="{% url 'landing' %}" class="btn btn-secondary btn-lg">
+            <i class="bi bi-arrow-left-circle"></i> Back to Classroom
+        </a>
+    </div>
 </div>
 {% endblock %}
