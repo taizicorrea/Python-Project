@@ -22,6 +22,7 @@ urlpatterns = [
     path('remove_student/', views.remove_student, name='remove_student'),
     path('classroom/delete/<int:classroom_id>/', delete_classroom, name='delete_classroom'),
     path('create-quiz/<int:classroom_id>/', views.create_quiz, name='create_quiz'),
+    path('quiz/<int:quiz_id>/take/', views.take_quiz, name='take_quiz'),
     path('get-questions/', views.get_questions, name='get_questions'),
     path('quiz/<int:quiz_id>/add-question/', views.add_question, name='add_question'),
     path('unenroll/<int:classroom_id>/', unenroll_student, name='unenroll_student'),

@@ -1,6 +1,8 @@
+import csv
 import random
 import json
 import string
+from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
@@ -14,7 +16,8 @@ from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm
     PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm
 from django.contrib.auth import logout
 from django.contrib import messages
-from .models import Classroom, Quiz, Question
+from .models import Classroom, Quiz, Question, StudentQuizScore
+
 
 #Sign Up View
 def signup_view(request):
@@ -453,3 +456,124 @@ def add_question(request):
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 
+@login_required
+def take_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    # Ensure the student is enrolled in the classroom
+    if request.user not in quiz.classroom.students.all():
+        messages.error(request, "You are not enrolled in this classroom.")
+        return redirect('landing')
+
+    # Check if the quiz is active based on due date
+    if quiz.due_date < now():  # Use Django's timezone-aware now
+        messages.error(request, "This quiz is no longer available.")
+        return redirect('landing')
+
+    if request.method == 'GET':
+        questions = quiz.questions.all()
+        return render(request, 'Quiz_App/take_quiz.html', {
+            'quiz': quiz,
+            'questions': questions
+        })
+
+    elif request.method == 'POST':
+        # Redirect POST requests to the `submit_quiz` view
+        return submit_quiz(request, quiz_id)
+
+    # If the request method is neither GET nor POST, return an error
+    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+@login_required
+def submit_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    # Ensure the student is enrolled in the classroom
+    if request.user not in quiz.classroom.students.all():
+        messages.error(request, "You are not enrolled in this classroom.")
+        return redirect('landing')
+
+    if request.method == 'POST':
+        answers = request.POST.dict()
+        print("Received POST data:", answers)  # Debug: Check received POST data
+
+        score = 0
+        total = quiz.questions.count()
+
+        # Iterate through each question in the quiz
+        for question in quiz.questions.all():
+            user_answer = answers.get(f"question_{question.id}", "").strip()  # Get user answer
+            print(f"Question ID: {question.id}, User Answer: '{user_answer}'")
+
+            correct_answers = question.correct_answers_as_list()
+            print(f"Correct Answers for Question ID {question.id}: {correct_answers}")
+
+            # Check if the user's answer is correct
+            if question.is_answer_correct(user_answer):
+                print(f"Correct for Question ID: {question.id}")
+                score += 1
+            else:
+                print(f"Incorrect for Question ID: {question.id}")
+
+        # Save the student's quiz score
+        StudentQuizScore.objects.create(
+            student=request.user,
+            quiz=quiz,
+            score=score,
+            total_questions=total
+        )
+
+        # Display score to the student
+        messages.success(request, f"You scored {score}/{total}.")
+        return redirect('landing')
+
+    # Return an error if the method is not POST
+    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+@login_required
+def get_quiz_questions(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    if request.method == 'GET':
+        questions = list(
+            quiz.questions.values(
+                'id', 'question_text', 'question_type', 'multiple_choice_options'
+            )
+        )
+        for question in questions:
+            question['multiple_choice_options'] = (
+                question['multiple_choice_options'].split("\n")
+                if question['multiple_choice_options'] else []
+            )
+        return JsonResponse({'questions': questions}, status=200)
+
+    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+@login_required
+def download_quiz_report(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    # Ensure the requestor is the teacher of the classroom
+    if request.user != quiz.classroom.teacher:
+        messages.error(request, "You are not authorized to view this report.")
+        return redirect('landing')
+
+    # Generate CSV report
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="quiz_{quiz_id}_report.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Student', 'Score', 'Total Questions', 'Submission Time'])
+
+    # Fetch all scores for this quiz
+    scores = StudentQuizScore.objects.filter(quiz=quiz).select_related('student')
+    for score_entry in scores:
+        writer.writerow([
+            f"{score_entry.student.first_name} {score_entry.student.last_name}",
+            score_entry.score,
+            score_entry.total_questions,
+            score_entry.submitted_at
+        ])
+
+    return response

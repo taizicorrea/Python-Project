@@ -1,9 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 from django.contrib.auth.models import User
-from .models import Profile, Classroom, Quiz, Question
-
-
+from .models import Profile, Classroom, Quiz, Question, StudentQuizScore
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
@@ -67,6 +65,12 @@ class QuestionAdmin(admin.ModelAdmin):
         """Override save_model to perform additional validation if needed."""
         obj.full_clean()  # Ensure all validations are respected
         super().save_model(request, obj, form, change)
+
+@admin.register(StudentQuizScore)
+class StudentQuizScoreAdmin(admin.ModelAdmin):
+    list_display = ('student', 'quiz', 'score', 'total_questions', 'submitted_at')
+    list_filter = ('quiz',)
+    search_fields = ('student__username', 'quiz__title')
 
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):

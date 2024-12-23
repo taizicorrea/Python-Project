@@ -81,15 +81,19 @@ class Question(models.Model):
 
     def is_answer_correct(self, user_answer):
         """
-        Check if a provided answer is correct.
-        For Multiple Choice and Identification, support multiple answers.
-        For True/False, use a direct match.
+        Check if a provided answer is correct with exact case-sensitive matching.
         """
+        print(f"Question: {self.question_text}")
+        print(f"User Answer: {user_answer}")
+        print(f"Correct Answers: {self.correct_answers_as_list()}")
+
         if self.question_type == 'true_false':
-            return user_answer.strip().lower() == self.correct_answers.strip().lower()
+            # Direct case-sensitive match for True/False
+            return user_answer.strip() == self.correct_answers.strip()
         elif self.question_type in ['multiple_choice', 'identification']:
-            correct = [answer.strip().lower() for answer in self.correct_answers_as_list()]
-            return user_answer.strip().lower() in correct
+            # Exact case-sensitive match for multiple choice or identification
+            correct = [answer.strip() for answer in self.correct_answers_as_list()]
+            return user_answer.strip() in correct
         return False
 
     def clean(self):
@@ -117,3 +121,13 @@ class Question(models.Model):
 
     def __str__(self):
         return f"Question: {self.question_text} (Type: {self.question_type})"
+
+class StudentQuizScore(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    score = models.IntegerField()
+    total_questions = models.IntegerField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.username} - {self.quiz.title} - {self.score}/{self.total_questions}"

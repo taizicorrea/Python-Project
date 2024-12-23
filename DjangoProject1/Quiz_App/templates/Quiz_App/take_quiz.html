@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Take Quiz{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/take_quiz.css' %}">
+
+<!-- Prompt to Start Quiz -->
+<div id="quiz-prompt" class="modal fade show" tabindex="-1" aria-hidden="false" style="display: block; background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start Quiz</h5>
+            </div>
+            <div class="modal-body">
+                <p>You are about to start the quiz. The timer will begin as soon as you start.</p>
+                <p><strong>Time Limit:</strong> {{ quiz.timer|default:10 }} minutes</p>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'landing' %}?classroom_id={{ quiz.classroom.id }}" class="btn btn-secondary">Cancel</a>
+                <button id="start-quiz-btn" class="btn btn-primary">Start Quiz</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Container -->
+<div class="container mt-4 d-none" id="quiz-container">
+    <!-- Sticky Header -->
+    <div class="sticky-header bg-primary text-white p-3 d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Time Remaining: <span id="timer">{{ quiz.timer|default:10 }}:00</span></strong>
+        </div>
+    </div>
+
+    <!-- Quiz Header -->
+    <div class="p-4 text-white rounded-3 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4caf50, #81c784);">
+        <h4 class="mb-1">{{ quiz.title }}</h4>
+        <p class="mb-1"><strong>Due:</strong> {{ quiz.due_date|date:"M d, Y h:i A" }}</p>
+        <p class="mb-0"><strong>Time Limit:</strong> {{ quiz.timer|default:10 }} minutes</p>
+    </div>
+
+    <!-- Questions Form -->
+    <form method="post" id="quiz-form">
+        {% csrf_token %}
+        {% for question in questions %}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+                <p><strong>Q{{ forloop.counter }}: {{ question.question_text }}</strong></p>
+                {% if question.question_type == "multiple_choice" %}
+                {% for option in question.options_as_list %}
+                <div class="form-check">
+                    <input type="radio" name="question_{{ question.id }}" value="{{ option }}" class="form-check-input" id="q{{ question.id }}_{{ forloop.counter }}">
+                    <label class="form-check-label" for="q{{ question.id }}_{{ forloop.counter }}">{{ option }}</label>
+                </div>
+                {% endfor %}
+                {% elif question.question_type == "true_false" %}
+                <div class="form-check">
+                    <input type="radio" name="question_{{ question.id }}" value="True" class="form-check-input" id="q{{ question.id }}_true">
+                    <label class="form-check-label" for="q{{ question.id }}_true">True</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="question_{{ question.id }}" value="False" class="form-check-input" id="q{{ question.id }}_false">
+                    <label class="form-check-label" for="q{{ question.id }}_false">False</label>
+                </div>
+                {% elif question.question_type == "identification" %}
+                <input type="text" name="question_{{ question.id }}" class="form-control" placeholder="Enter your answer">
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success mt-3">Submit Quiz</button>
+    </form>
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const quizForm = document.getElementById('quiz-form');
+    const timerElement = document.getElementById('timer');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    const quizPrompt = document.getElementById('quiz-prompt');
+    const quizContainer = document.getElementById('quiz-container');
+
+    let timeRemaining = {{ quiz.timer|default:10 }} * 60;
+
+    if (startQuizBtn) {
+        startQuizBtn.addEventListener('click', function () {
+            quizPrompt.style.display = 'none';
+            quizContainer.classList.remove('d-none');
+            const timerInterval = setInterval(() => {
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up! Submitting your quiz.');
+                    quizForm.submit();
+                } else {
+                    const minutes = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+                    const seconds = (timeRemaining % 60).toString().padStart(2, '0');
+                    timerElement.textContent = `${minutes}:${seconds}`;
+                    timeRemaining--;
+                }
+            }, 1000);
+        });
+    }
+});
+</script>
+
+{% endblock %}
