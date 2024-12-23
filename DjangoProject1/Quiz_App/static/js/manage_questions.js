@@ -145,7 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Validation
     if (!questionText || (questionType === 'multiple_choice' && options.length === 0)) {
-        alert('Please fill out all required fields.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please fill out all required fields.',
+        });
         return;
     }
 
@@ -173,17 +177,31 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(responseData => {
             console.log('Backend Response:', responseData); // Log response
             if (responseData.success) {
-                alert('Question saved successfully!');
-                location.reload(); // Reload to update the questions
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Question saved successfully!',
+                }).then(() => {
+                    location.reload(); // Reload to update the questions
+                });
             } else {
-                alert(`Failed to save the question: ${responseData.error}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: `Failed to save the question: ${responseData.error}`,
+                });
             }
         })
         .catch(error => {
             console.error('Error saving question:', error);
-            alert('An error occurred while saving the question.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'An error occurred while saving the question.',
+            });
         });
 });
+
 
 
     // Render default fields for the initial state
