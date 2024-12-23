@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Quiz Feedback{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>{{ quiz.title }}</h3>
+    <p>Your Score: {{ score }}/{{ total }}</p>
+    <hr>
+    {% for item in feedback %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p><strong>Q: {{ item.question }}</strong></p>
+            <p>Your Answer: <strong>{{ item.user_answer|default:"No Answer" }}</strong></p>
+            <p>Correct Answer(s): <strong>{{ item.correct_answers|join:", " }}</strong></p>
+            {% if item.is_correct %}
+            <p class="text-success">Correct</p>
+            {% else %}
+            <p class="text-danger">Incorrect</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    <hr>
+    <a href="{% url 'landing' %}" class="btn btn-secondary">Back to Classroom</a>
+</div>
+{% endblock %}

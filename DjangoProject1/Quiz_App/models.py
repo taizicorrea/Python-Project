@@ -34,6 +34,7 @@ class Quiz(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     timer = models.PositiveIntegerField(help_text="Duration of the quiz in minutes", default=30)
+    is_active = models.BooleanField(default=True)  # Add this field
 
     def __str__(self):
         return f"{self.title} ({self.classroom.class_name})"

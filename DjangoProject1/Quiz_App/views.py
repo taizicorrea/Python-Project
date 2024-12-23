@@ -2,6 +2,9 @@ import csv
 import random
 import json
 import string
+from io import BytesIO
+
+from django.template.loader import render_to_string
 from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -10,7 +13,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from django.urls import reverse
 from django.db import transaction
-
+from weasyprint import HTML
+from django.templatetags.static import static
 
 from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm, CreateClassForm, ProfileForm, \
     PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm
@@ -310,7 +314,13 @@ def landing_page(request):
         classroom_id = request.GET.get('classroom_id')
         if classroom_id:
             selected_classroom = get_object_or_404(Classroom, id=classroom_id)
-            quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')  # Quizzes for selected classroom
+
+            if request.user.profile.role == 'teacher':
+                # Fetch all quizzes for teachers
+                quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
+            elif request.user.profile.role == 'student':
+                # Fetch only active quizzes for students
+                quizzes = Quiz.objects.filter(classroom=selected_classroom, is_active=True).order_by('due_date')
 
     join_form = JoinClassForm()
     create_form = CreateClassForm()
@@ -465,7 +475,11 @@ def take_quiz(request, quiz_id):
         messages.error(request, "You are not enrolled in this classroom.")
         return redirect('landing')
 
-    # Check if the quiz is active based on due date
+    # Check if the quiz is active and not past the due date
+    if not quiz.is_active:
+        messages.error(request, "This quiz is currently disabled.")
+        return redirect('landing')
+
     if quiz.due_date < now():  # Use Django's timezone-aware now
         messages.error(request, "This quiz is no longer available.")
         return redirect('landing')
@@ -495,27 +509,28 @@ def submit_quiz(request, quiz_id):
 
     if request.method == 'POST':
         answers = request.POST.dict()
-        print("Received POST data:", answers)  # Debug: Check received POST data
-
+        feedback = []  # Store feedback for each question
         score = 0
         total = quiz.questions.count()
 
         # Iterate through each question in the quiz
         for question in quiz.questions.all():
-            user_answer = answers.get(f"question_{question.id}", "").strip()  # Get user answer
-            print(f"Question ID: {question.id}, User Answer: '{user_answer}'")
-
+            user_answer = answers.get(f"question_{question.id}", "").strip()
             correct_answers = question.correct_answers_as_list()
-            print(f"Correct Answers for Question ID {question.id}: {correct_answers}")
 
-            # Check if the user's answer is correct
-            if question.is_answer_correct(user_answer):
-                print(f"Correct for Question ID: {question.id}")
+            is_correct = user_answer in correct_answers
+            if is_correct:
                 score += 1
-            else:
-                print(f"Incorrect for Question ID: {question.id}")
 
-        # Save the student's quiz score
+            # Append feedback for this question
+            feedback.append({
+                "question": question.question_text,
+                "user_answer": user_answer,
+                "correct_answers": correct_answers,
+                "is_correct": is_correct,
+            })
+
+        # Save the student's score
         StudentQuizScore.objects.create(
             student=request.user,
             quiz=quiz,
@@ -523,9 +538,13 @@ def submit_quiz(request, quiz_id):
             total_questions=total
         )
 
-        # Display score to the student
-        messages.success(request, f"You scored {score}/{total}.")
-        return redirect('landing')
+        # Render the feedback page
+        return render(request, 'Quiz_App/quiz_feedback.html', {
+            'quiz': quiz,
+            'feedback': feedback,
+            'score': score,
+            'total': total,
+        })
 
     # Return an error if the method is not POST
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
@@ -550,30 +569,114 @@ def get_quiz_questions(request, quiz_id):
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
+
+
 @login_required
-def download_quiz_report(request, quiz_id):
+def download_teacher_quiz_report_pdf(request, quiz_id):
+    # Fetch the quiz
     quiz = get_object_or_404(Quiz, id=quiz_id)
 
-    # Ensure the requestor is the teacher of the classroom
+    # Check if the logged-in user is the teacher of the class
     if request.user != quiz.classroom.teacher:
-        messages.error(request, "You are not authorized to view this report.")
+        messages.error(request, "You are not authorized to download this report.")
         return redirect('landing')
 
-    # Generate CSV report
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="quiz_{quiz_id}_report.csv"'
+    # Fetch student scores for the quiz
+    student_scores = StudentQuizScore.objects.filter(quiz=quiz)
 
-    writer = csv.writer(response)
-    writer.writerow(['Student', 'Score', 'Total Questions', 'Submission Time'])
+    # Handle case where no scores exist
+    if not student_scores.exists():
+        messages.error(request, "No responses found for this quiz.")
+        return redirect('landing')
 
-    # Fetch all scores for this quiz
-    scores = StudentQuizScore.objects.filter(quiz=quiz).select_related('student')
-    for score_entry in scores:
-        writer.writerow([
-            f"{score_entry.student.first_name} {score_entry.student.last_name}",
-            score_entry.score,
-            score_entry.total_questions,
-            score_entry.submitted_at
-        ])
+    # Prepare the student data for the report
+    student_data = [
+        {
+            'student_name': f"{score.student.first_name} {score.student.last_name}",
+            'score': score.score,
+            'total_questions': score.total_questions,
+            'percentage': round((score.score / score.total_questions) * 100, 2) if score.total_questions > 0 else 0,
+        }
+        for score in student_scores
+    ]
+
+    # Context for the PDF
+    context = {
+        'subject': quiz.classroom.subject,
+        'quiz_title': quiz.title,
+        'teacher': f'{quiz.classroom.teacher.first_name} {quiz.classroom.teacher.last_name}',
+        'date_printed': now().strftime('%d/%m/%Y %I:%M %p'),
+        'student_data': student_data,
+    }
+
+    # Render the template to HTML
+    html_content = render_to_string('Quiz_App/teacher_quiz_report_template.html', context)
+
+    # Generate the PDF using WeasyPrint
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{quiz.classroom.subject}_{quiz.title}_teacher_report.pdf"'
+
+    # Convert HTML content to PDF
+    HTML(string=html_content).write_pdf(response)
 
     return response
+
+
+@login_required
+def manage_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    # Ensure only the teacher who created the quiz can access this page
+    if request.user != quiz.classroom.teacher:
+        return HttpResponseForbidden("You are not authorized to manage this quiz.")
+
+    # Handle form actions (enable/disable/delete)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "disable":
+            quiz.is_active = False
+            quiz.save()
+            messages.success(request, "Quiz has been disabled.")
+        elif action == "enable":
+            quiz.is_active = True
+            quiz.save()
+            messages.success(request, "Quiz has been enabled.")
+        elif action == "delete":
+            quiz.delete()
+            messages.success(request, "Quiz has been deleted.")
+            return redirect("landing")
+
+    # Fetch student scores and calculate percentages
+    student_scores = []
+    for score in StudentQuizScore.objects.filter(quiz=quiz):
+        percentage = (score.score / score.total_questions) * 100 if score.total_questions > 0 else 0
+        student_scores.append({
+            "student": score.student,
+            "score": score.score,
+            "total_questions": score.total_questions,
+            "percentage": round(percentage, 2),  # Rounded to 2 decimal places
+        })
+
+    return render(request, "Quiz_App/manage_quiz.html", {
+        "quiz": quiz,
+        "student_scores": student_scores,
+    })
+
+@login_required
+def edit_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    # Ensure only the teacher who created the quiz can edit it
+    if request.user != quiz.classroom.teacher:
+        return HttpResponseForbidden("You are not allowed to edit this quiz.")
+
+    if request.method == "POST":
+        form = QuizForm(request.POST, instance=quiz)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Quiz updated successfully.")
+            return redirect('manage_quiz', quiz_id=quiz.id)
+    else:
+        form = QuizForm(instance=quiz)
+
+    return render(request, 'Quiz_App/edit_quiz.html', {'form': form, 'quiz': quiz})
