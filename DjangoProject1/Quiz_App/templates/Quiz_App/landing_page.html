@@ -1,6 +1,7 @@
 
 <!DOCTYPE html>
 {% load static %}
+{% load custom_filters %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -79,8 +80,10 @@
             <a href="{% url 'landing' %}" class="active">
                 <i class="bi bi-house"></i> <span>Home</span>
             </a>
-            <a href="#"><i class="bi bi-archive"></i> <span>Archived classes</span></a>
-            <a href="#"><i class="bi bi-gear"></i> <span>Settings</span></a>
+            <a href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+            <i class="bi bi-gear"></i> <span>Settings</span>
+            </a>
+
         </div>
 
     <!-- Illustration (Only visible if no classrooms exist) -->
@@ -203,17 +206,17 @@
 
                 <!-- Tab Content -->
                 <div class="tab-content">
-                    <!-- Quiz Tab -->
-                    <div class="tab-pane fade show active" id="stream">
-                        {% if user.profile.role == 'teacher' %}
-                        <div class="d-flex justify-content-start mt-3">
-                            <a href="{% url 'create_quiz' selected_classroom.id %}" class="btn btn-primary btn-sm rounded-5 px-3 py-2 shadow">
-                                <i class="bi bi-plus-lg me-1"></i> Create Quiz
-                            </a>
-                        </div>
-                        {% endif %}
+                <!-- Quiz Tab -->
+                <div class="tab-pane fade show active" id="stream">
+                    {% if user.profile.role == 'teacher' %}
+                    <div class="d-flex justify-content-start mt-3">
+                        <a href="{% url 'create_quiz' selected_classroom.id %}" class="btn btn-primary btn-sm rounded-5 px-3 py-2 shadow">
+                            <i class="bi bi-plus-lg me-1"></i> Create Quiz
+                        </a>
+                    </div>
+                    {% endif %}
 
-                        <h5 class="mt-3">Quizzes</h5>
+                    <h5 class="mt-3">Quizzes</h5>
                     {% if quizzes %}
                     <div class="mt-4">
                         <ul class="list-group">
@@ -230,8 +233,13 @@
                                     <!-- View Quiz button for teachers -->
                                     <a href="{% url 'manage_quiz' quiz.id %}" class="btn btn-primary btn-sm">View Quiz</a>
                                 {% elif user.profile.role == 'student' %}
-                                    <!-- Take Quiz button for students -->
-                                    <a href="{% url 'take_quiz' quiz.id %}" class="btn btn-primary btn-sm">Take Quiz</a>
+                                    {% if quiz.is_active %}
+                                        <!-- Take Quiz button for active quizzes -->
+                                        <a href="{% url 'take_quiz' quiz.id %}" class="btn btn-primary btn-sm">Take Quiz</a>
+                                    {% else %}
+                                        <!-- Disabled button for inactive quizzes -->
+                                        <button class="btn btn-secondary btn-sm" disabled>Quiz Closed</button>
+                                    {% endif %}
                                 {% endif %}
                             </li>
                             {% endfor %}
@@ -240,13 +248,126 @@
                     {% else %}
                     <p class="text-muted mt-4">No quizzes available.</p>
                     {% endif %}
-                    </div>
+                </div>
+
 
                     <!-- Grades Tab -->
                     <div class="tab-pane fade" id="classwork">
-                        <h5 class="mt-3">Your Grades</h5>
-                        <p>Grades will appear here.</p>
+                        <h5 class="mt-3">Grades</h5>
+
+                        <!-- Filters -->
+                        {% if user.profile.role == 'teacher' %}
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-5">
+                                <select id="filterStudent" class="form-select">
+                                    <option value="">All Students</option>
+                                    {% for student in selected_classroom.students.all %}
+                                        <option value="{{ student.first_name }} {{ student.last_name }}">{{ student.first_name }} {{ student.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <select id="filterQuiz" class="form-select">
+                                    <option value="">All Quizzes</option>
+                                    {% for quiz in quizzes %}
+                                        <option value="{{ quiz.title }}">{{ quiz.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button id="clearFilter" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Grades Table -->
+                        {% if user.profile.role == 'student' %}
+                        <table class="table table-bordered table-striped mt-4">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Due</th>
+                                    <th>Quiz</th>
+                                    <th>Status</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for quiz in quizzes %}
+                                <tr>
+                                    <td>{{ quiz.due_date|date:"M d, Y h:i A" }}</td>
+                                    <td>{{ quiz.title }}</td>
+                                    <td>
+                                        {% if quiz in completed_quizzes %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Taken</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if quiz in completed_quizzes %}
+                                            {{ student_grades|get_item:quiz.id|default:0 }}/{{ quiz.questions.count }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No quizzes available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% elif user.profile.role == 'teacher' %}
+                        <table id="student-scores-table" class="table table-bordered table-striped mt-4">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th onclick="sortTable(0)" style="cursor: pointer;">Student</th>
+                                    <th onclick="sortTable(1)" style="cursor: pointer;">Quiz</th>
+                                    <th>Status</th>
+                                    <th onclick="sortTable(2)" style="cursor: pointer;">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if selected_classroom.students.exists and quizzes %}
+                                {% for student in selected_classroom.students.all %}
+                                {% for quiz in quizzes %}
+                                <tr>
+                                    <td class="student-name">{{ student.first_name }} {{ student.last_name }}</td>
+                                    <td class="quiz-title">{{ quiz.title }}</td>
+                                    <td>
+                                        {% with score=student_scores|get_item:student.id|get_item:quiz.id %}
+                                        {% if score %}
+                                            <span class="badge bg-success">Taken</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Taken</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        {% with score=student_scores|get_item:student.id|get_item:quiz.id %}
+                                        {% if score %}
+                                            {{ score }}/{{ quiz.questions.count }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No students or quizzes available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        {% endif %}
                     </div>
+
 
                     <!-- People Tab -->
                     <div class="tab-pane fade" id="people">
@@ -555,6 +676,74 @@
             window.location.href = `?classroom_id=${classroomId}`;
         }
     </script>
+
+
+<script>
+    // Filter by both Student Name and Quiz Title
+    function filterTable() {
+        const selectedStudent = document.getElementById("filterStudent").value.toLowerCase();
+        const selectedQuiz = document.getElementById("filterQuiz").value.toLowerCase();
+        const rows = document.querySelectorAll("#student-scores-table tbody tr");
+
+        rows.forEach(row => {
+            const studentName = row.querySelector(".student-name").textContent.toLowerCase();
+            const quizTitle = row.querySelector(".quiz-title").textContent.toLowerCase();
+
+            // Check if the row matches the selected filters
+            const studentMatches = selectedStudent === "" || studentName.includes(selectedStudent);
+            const quizMatches = selectedQuiz === "" || quizTitle.includes(selectedQuiz);
+
+            // Show or hide the row
+            row.style.display = studentMatches && quizMatches ? "" : "none";
+        });
+    }
+
+    // Event listeners for dropdown filters
+    document.getElementById("filterStudent").addEventListener("change", filterTable);
+    document.getElementById("filterQuiz").addEventListener("change", filterTable);
+
+    // Clear Filters functionality
+    document.getElementById("clearFilter").addEventListener("click", () => {
+        // Reset dropdowns to their default values
+        document.getElementById("filterStudent").value = "";
+        document.getElementById("filterQuiz").value = "";
+
+        // Reset table rows to visible
+        const rows = document.querySelectorAll("#student-scores-table tbody tr");
+        rows.forEach(row => {
+            row.style.display = "";
+        });
+    });
+
+    // Sort Table Columns
+    function sortTable(columnIndex) {
+        const table = document.getElementById("student-scores-table");
+        if (!table) return; // Ensure the table exists
+
+        const rows = Array.from(table.rows).slice(1); // Exclude header row
+        const isAscending = table.getAttribute("data-sort-asc") === "true";
+        const direction = isAscending ? 1 : -1;
+
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[columnIndex].innerText.trim();
+            const cellB = rowB.cells[columnIndex].innerText.trim();
+
+            // Handle numeric sorting
+            const numA = parseFloat(cellA);
+            const numB = parseFloat(cellB);
+
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return direction * (numA - numB);
+            }
+
+            // Fallback to string comparison
+            return direction * cellA.localeCompare(cellB);
+        });
+
+        rows.forEach(row => table.appendChild(row));
+        table.setAttribute("data-sort-asc", (!isAscending).toString());
+    }
+</script>
 
 
     <script src="{% static 'js/landing.js' %}"></script>

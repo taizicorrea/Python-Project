@@ -299,11 +299,16 @@ def edit_classroom(request):
         'form': form,
     })
 
+from django.utils.timezone import now
+
 @login_required
 def landing_page(request):
     classrooms = []
     quizzes = []
     selected_classroom = None
+    completed_quizzes = []
+    student_grades = {}
+    student_scores = []
 
     if request.user.is_authenticated:
         # Fetch classrooms based on user's role
@@ -317,13 +322,24 @@ def landing_page(request):
         if classroom_id:
             selected_classroom = get_object_or_404(Classroom, id=classroom_id)
 
-            if request.user.profile.role == 'teacher':
-                # Fetch all quizzes for teachers
-                quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
-            elif request.user.profile.role == 'student':
-                # Fetch only active quizzes for students
-                quizzes = Quiz.objects.filter(classroom=selected_classroom, is_active=True).order_by('due_date')
+            # Fetch quizzes and update their status based on due date
+            quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
+            for quiz in quizzes:
+                if quiz.due_date < now() and quiz.is_active:
+                    quiz.is_active = False
+                    quiz.save()
 
+            if request.user.profile.role == 'teacher':
+                # Fetch all quizzes and student scores for teachers
+                student_scores = StudentQuizScore.objects.filter(quiz__classroom=selected_classroom).select_related('student', 'quiz')
+            elif request.user.profile.role == 'student':
+                # Fetch only active quizzes and completed quizzes for students
+                quizzes = quizzes.filter(is_active=True)
+                completed_scores = StudentQuizScore.objects.filter(student=request.user, quiz__classroom=selected_classroom)
+                completed_quizzes = [score.quiz for score in completed_scores]
+                student_grades = {score.quiz.id: score.score for score in completed_scores}
+
+    # Forms for various modals
     join_form = JoinClassForm()
     create_form = CreateClassForm()
     profile_form = ProfileForm(instance=request.user)
@@ -335,6 +351,9 @@ def landing_page(request):
         'classrooms': classrooms,
         'selected_classroom': selected_classroom,  # Pass selected classroom
         'quizzes': quizzes,  # Pass quizzes for the selected classroom
+        'completed_quizzes': completed_quizzes,  # For student grades tab
+        'student_grades': student_grades,  # For student grades
+        'student_scores': student_scores,  # For teacher grades
         'join_form': join_form,
         'create_form': create_form,
         'edit_classroom': edit_classroom,
@@ -342,7 +361,6 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
     })
-
 
 
 # Home page view
