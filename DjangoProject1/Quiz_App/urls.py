@@ -1,5 +1,5 @@
 # Quiz_App/urls.py
-from django.urls import path,include
+from django.urls import path
 from . import views
 from .views import signup_view, login_view, landing_page, logout_view, profile_view, join_class, \
     create_class, account_management, add_student, unenroll_student, delete_classroom, \
@@ -32,5 +32,4 @@ urlpatterns = [
     path('question/<int:question_id>/edit/', views.edit_question, name='edit_question'),
     path('question/<int:question_id>/delete/', views.delete_question, name='delete_question'),
     path('save_question/', views.save_question, name='save_question'),
-    path('accounts/', include('allauth.urls')),
 ]
