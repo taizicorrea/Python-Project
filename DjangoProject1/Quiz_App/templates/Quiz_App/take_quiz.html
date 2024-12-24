@@ -16,6 +16,7 @@
             <div class="modal-body">
                 <p>You are about to start the quiz. The timer will begin as soon as you start.</p>
                 <p><strong>Time Limit:</strong> {{ quiz.timer|default:10 }} minutes</p>
+                <p><strong>Important:</strong> The quiz requires full screen. Exiting full screen may result in warnings or submission.</p>
             </div>
             <div class="modal-footer">
                 <a href="{% url 'landing' %}?classroom_id={{ quiz.classroom.id }}" class="btn btn-secondary">Cancel</a>
@@ -36,13 +37,13 @@
 
     <!-- Quiz Header -->
     <div class="p-4 text-white rounded-3 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4caf50, #81c784);">
-    <h4 class="mb-1">{{ quiz.title }}</h4>
-    <p class="mb-1"><strong>Due:</strong> {{ quiz.due_date|date:"M d, Y h:i A" }}</p>
-    <p class="mb-0"><strong>Time Limit:</strong> {{ quiz.timer|default:10 }} minutes</p>
-    {% if quiz.description %}
-    <p class="mt-2"><strong>Description:</strong> {{ quiz.description }}</p>
-    {% endif %}
-</div>
+        <h4 class="mb-1">{{ quiz.title }}</h4>
+        <p class="mb-1"><strong>Due:</strong> {{ quiz.due_date|date:"M d, Y h:i A" }}</p>
+        <p class="mb-0"><strong>Time Limit:</strong> {{ quiz.timer|default:10 }} minutes</p>
+        {% if quiz.description %}
+        <p class="mt-2"><strong>Description:</strong> {{ quiz.description }}</p>
+        {% endif %}
+    </div>
 
     <!-- Questions Form -->
     <form method="post" id="quiz-form">
@@ -79,7 +80,7 @@
     </form>
 </div>
 
-<!-- JavaScript -->
+<script src="{% static 'js/anti_cheating.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const quizForm = document.getElementById('quiz-form');
@@ -87,25 +88,42 @@ document.addEventListener('DOMContentLoaded', function () {
     const startQuizBtn = document.getElementById('start-quiz-btn');
     const quizPrompt = document.getElementById('quiz-prompt');
     const quizContainer = document.getElementById('quiz-container');
-
     let timeRemaining = {{ quiz.timer|default:10 }} * 60;
 
     if (startQuizBtn) {
         startQuizBtn.addEventListener('click', function () {
-            quizPrompt.style.display = 'none';
-            quizContainer.classList.remove('d-none');
-            const timerInterval = setInterval(() => {
-                if (timeRemaining <= 0) {
-                    clearInterval(timerInterval);
-                    alert('Time is up! Submitting your quiz.');
-                    quizForm.submit();
-                } else {
-                    const minutes = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
-                    const seconds = (timeRemaining % 60).toString().padStart(2, '0');
-                    timerElement.textContent = `${minutes}:${seconds}`;
-                    timeRemaining--;
-                }
-            }, 1000);
+            Swal.fire({
+                icon: 'info',
+                title: 'Quiz Started',
+                text: 'The quiz has started. Good luck!',
+                confirmButtonText: 'OK',
+            }).then(() => {
+                quizPrompt.style.display = 'none';
+                quizContainer.classList.remove('d-none');
+
+                // Initialize anti-cheating mechanisms
+                initializeAntiCheating();
+
+                // Timer
+                const timerInterval = setInterval(() => {
+                    if (timeRemaining <= 0) {
+                        clearInterval(timerInterval);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Time Up',
+                            text: 'Time is up! Your quiz will now be submitted.',
+                            confirmButtonText: 'OK',
+                        }).then(() => {
+                            quizForm.submit();
+                        });
+                    } else {
+                        const minutes = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+                        const seconds = (timeRemaining % 60).toString().padStart(2, '0');
+                        timerElement.textContent = `${minutes}:${seconds}`;
+                        timeRemaining--;
+                    }
+                }, 1000);
+            });
         });
     }
 });

@@ -299,8 +299,6 @@ def edit_classroom(request):
         'form': form,
     })
 
-from django.utils.timezone import now
-
 @login_required
 def landing_page(request):
     classrooms = []
@@ -308,7 +306,7 @@ def landing_page(request):
     selected_classroom = None
     completed_quizzes = []
     student_grades = {}
-    student_scores = []
+    student_scores = {}
 
     if request.user.is_authenticated:
         # Fetch classrooms based on user's role
@@ -331,7 +329,12 @@ def landing_page(request):
 
             if request.user.profile.role == 'teacher':
                 # Fetch all quizzes and student scores for teachers
-                student_scores = StudentQuizScore.objects.filter(quiz__classroom=selected_classroom).select_related('student', 'quiz')
+                student_scores_query = StudentQuizScore.objects.filter(quiz__classroom=selected_classroom).select_related('student', 'quiz')
+                # Create a dictionary for easier lookup in templates
+                for score in student_scores_query:
+                    if score.student_id not in student_scores:
+                        student_scores[score.student_id] = {}
+                    student_scores[score.student_id][score.quiz_id] = score.score
             elif request.user.profile.role == 'student':
                 # Fetch only active quizzes and completed quizzes for students
                 quizzes = quizzes.filter(is_active=True)
@@ -353,7 +356,7 @@ def landing_page(request):
         'quizzes': quizzes,  # Pass quizzes for the selected classroom
         'completed_quizzes': completed_quizzes,  # For student grades tab
         'student_grades': student_grades,  # For student grades
-        'student_scores': student_scores,  # For teacher grades
+        'student_scores': student_scores,  # For teacher grades (dictionary format)
         'join_form': join_form,
         'create_form': create_form,
         'edit_classroom': edit_classroom,
@@ -361,7 +364,6 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
     })
-
 
 # Home page view
 def home_view(request):
