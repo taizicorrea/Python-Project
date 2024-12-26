@@ -181,4 +181,24 @@ function confirmDelete() {
     }
 }
 
+function confirmRemove(studentId) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: 'This will remove the student from the class.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById(`removeStudentForm-${studentId}`).submit();
+        }
+    });
+}
+
+
+
+
+
 
