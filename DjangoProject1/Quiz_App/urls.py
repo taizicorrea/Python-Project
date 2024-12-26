@@ -3,7 +3,7 @@ from django.urls import path
 from . import views
 from .views import signup_view, login_view, landing_page, logout_view, profile_view, join_class, \
     create_class, account_management, add_student, unenroll_student, delete_classroom, \
-    edit_classroom
+    edit_classroom, add_existing_questions
 
 urlpatterns = [
     # path('', home_view, name='home'),
@@ -32,4 +32,5 @@ urlpatterns = [
     path('question/<int:question_id>/edit/', views.edit_question, name='edit_question'),
     path('question/<int:question_id>/delete/', views.delete_question, name='delete_question'),
     path('save_question/', views.save_question, name='save_question'),
+    path('add_existing_questions/', add_existing_questions, name='add_existing_questions'),
 ]

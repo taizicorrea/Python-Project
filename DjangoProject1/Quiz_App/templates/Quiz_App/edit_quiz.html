@@ -8,12 +8,17 @@ Edit Quiz - {{ quiz.title }}
 <div id="quiz-container" data-quiz-id="{{ quiz.id }}"></div>
 
 <div class="container mt-4">
+        <!-- Back to Manage Quiz Button -->
+    <a href="{% url 'manage_quiz' quiz.id %}" class="btn btn-outline-secondary mb-3">
+        ← Back to Quiz Dashboard
+    </a>
+
     <h1 class="mb-4">Edit Quiz: {{ quiz.title }}</h1>
 
     <!-- Quiz Details Form -->
     <div class="card mb-5 shadow-sm">
         <div class="card-body">
-            <form method="post">
+            <form method="post" id="quizDetailsForm">
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="title" class="form-label">Quiz Title</label>
@@ -31,7 +36,7 @@ Edit Quiz - {{ quiz.title }}
                     <label for="timer" class="form-label">Timer (minutes)</label>
                     <input type="number" id="timer" name="timer" class="form-control" value="{{ quiz.timer }}">
                 </div>
-                <button type="submit" class="btn btn-success">Save Changes</button>
+                <button type="button" class="btn btn-success" id="saveChangesBtn">Save Changes</button>
                 <a href="{% url 'manage_quiz' quiz.id %}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
@@ -41,9 +46,14 @@ Edit Quiz - {{ quiz.title }}
     <h3 class="mb-3">Questions</h3>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Manage Questions</h5>
-        <button class="btn btn-primary" id="openAddQuestionModal" data-bs-toggle="modal" data-bs-target="#questionModal">
-            <i class="bi bi-plus-circle"></i> Add New Question
-        </button>
+        <div>
+            <button class="btn btn-primary" id="openAddQuestionModal" data-bs-toggle="modal" data-bs-target="#questionModal">
+                <i class="bi bi-plus-circle"></i> Add New Question
+            </button>
+            <button class="btn btn-info" id="openAddExistingQuestionModal" data-bs-toggle="modal" data-bs-target="#existingQuestionsModal">
+                <i class="bi bi-clipboard-plus"></i> Add Existing Question
+            </button>
+        </div>
     </div>
 
     {% if quiz.questions.exists %}
@@ -72,9 +82,9 @@ Edit Quiz - {{ quiz.title }}
                         data-bs-target="#questionModal">
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
-                    <form method="post" action="{% url 'delete_question' question.id %}" style="display:inline;">
+                    <form method="post" class="delete-question-form" action="{% url 'delete_question' question.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this question?');">
+                        <button type="button" class="btn btn-danger btn-sm delete-question-btn">
                             <i class="bi bi-trash"></i> Delete
                         </button>
                     </form>
@@ -124,7 +134,92 @@ Edit Quiz - {{ quiz.title }}
     </div>
 </div>
 
+<!-- Existing Questions Modal -->
+<div class="modal fade" id="existingQuestionsModal" tabindex="-1" aria-labelledby="existingQuestionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="existingQuestionsModalLabel">Add Existing Questions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'add_existing_questions' %}">
+                {% csrf_token %}
+                <input type="hidden" name="quiz_id" value="{{ quiz.id }}">
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Select</th>
+                                    <th>Question Text</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for question in existing_questions %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="question_ids" value="{{ question.id }}">
+                                    </td>
+                                    <td>{{ question.question_text }}</td>
+                                    <td>{{ question.get_question_type_display }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add Selected Questions</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <script src="{% static 'js/manage_questions.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // SweetAlert for Save Changes
+    document.getElementById('saveChangesBtn').addEventListener('click', function () {
+        Swal.fire({
+            title: 'Save Changes?',
+            text: 'Are you sure you want to save these changes?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Submit the form if the user confirms
+                document.getElementById('quizDetailsForm').submit();
+            }
+        });
+    });
+
+    // SweetAlert for Deleting a Question
+    document.querySelectorAll('.delete-question-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const form = this.closest('form');
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit(); // Submit the form if the user confirms
+                }
+            });
+        });
+    });
+</script>
+
 
 {% endblock %}

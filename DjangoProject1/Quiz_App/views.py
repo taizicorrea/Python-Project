@@ -748,11 +748,22 @@ def edit_quiz(request, quiz_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Quiz updated successfully.")
-            return redirect('manage_quiz', quiz_id=quiz.id)
+            return redirect("manage_quiz", quiz_id=quiz.id)
     else:
         form = QuizForm(instance=quiz)
 
-    return render(request, 'Quiz_App/edit_quiz.html', {'form': form, 'quiz': quiz})
+    # Fetch all questions not currently part of the quiz
+    existing_questions = Question.objects.exclude(quizzes=quiz)
+
+    return render(
+        request,
+        "Quiz_App/edit_quiz.html",
+        {
+            "form": form,
+            "quiz": quiz,
+            "existing_questions": existing_questions,
+        },
+    )
 
 @csrf_exempt
 def save_question(request):
@@ -766,31 +777,79 @@ def save_question(request):
             options = data.get('options', [])
             correct_answers = data.get('correct_answers', '')
 
+            # Validate required fields
             if not quiz_id or not question_text or not question_type:
                 return JsonResponse({'success': False, 'error': 'Required fields are missing'}, status=400)
 
+            # Validate the quiz existence
             quiz = Quiz.objects.get(id=quiz_id)
 
-            if question_id:  # Update existing question
+            # Additional validation based on question type
+            if question_type == 'multiple_choice':
+                if not options:
+                    return JsonResponse({'success': False, 'error': 'Multiple choice questions must have options.'}, status=400)
+                if not correct_answers:
+                    return JsonResponse({'success': False, 'error': 'Multiple choice questions must have a correct answer.'}, status=400)
+            elif question_type == 'identification':
+                if not correct_answers.strip():
+                    return JsonResponse({'success': False, 'error': 'Identification questions must have at least one correct answer.'}, status=400)
+            elif question_type == 'true_false':
+                if correct_answers not in ['True', 'False']:
+                    return JsonResponse({'success': False, 'error': 'True/False questions must have a valid correct answer.'}, status=400)
+
+            # Update existing question
+            if question_id:
                 question = Question.objects.get(id=question_id)
                 question.question_text = question_text
                 question.question_type = question_type
                 question.multiple_choice_options = "\n".join(options) if options else ""
-                question.correct_answers = correct_answers
+                question.correct_answers = correct_answers.strip()
                 question.save()
             else:  # Create a new question
                 question = Question.objects.create(
                     question_text=question_text,
                     question_type=question_type,
                     multiple_choice_options="\n".join(options) if options else "",
-                    correct_answers=correct_answers,
+                    correct_answers=correct_answers.strip(),
                 )
                 question.quizzes.add(quiz)  # Associate the question with the quiz
 
             return JsonResponse({'success': True})
         except Quiz.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Quiz not found'}, status=404)
+        except Question.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Question not found.'}, status=404)
         except Exception as e:
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error saving question: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
+@login_required
+def add_existing_questions(request):
+    if request.method == "POST":
+        quiz_id = request.POST.get("quiz_id")
+        question_ids = request.POST.getlist("question_ids")
+
+        quiz = get_object_or_404(Quiz, id=quiz_id)
+
+        # Check if the user is authorized to edit the quiz
+        if request.user != quiz.classroom.teacher:
+            return HttpResponseForbidden("You are not authorized to edit this quiz.")
+
+        # Add selected questions to the quiz
+        for question_id in question_ids:
+            try:
+                question = Question.objects.get(id=question_id)
+                quiz.questions.add(question)
+            except Question.DoesNotExist:
+                messages.error(request, f"Question ID {question_id} does not exist.")
+
+        messages.success(request, "Selected questions were added to the quiz.")
+        return redirect("edit_quiz", quiz_id=quiz.id)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
