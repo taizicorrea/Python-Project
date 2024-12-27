@@ -2,8 +2,8 @@
 from django.urls import path
 from . import views
 from .views import signup_view, login_view, landing_page, logout_view, profile_view, join_class, \
-    create_class, account_management, add_student, unenroll_student, delete_classroom, \
-    edit_classroom, add_existing_questions
+    create_class, account_management, unenroll_student, delete_classroom, \
+    edit_classroom, add_existing_questions, search_students, add_students
 
 urlpatterns = [
     # path('', home_view, name='home'),
@@ -16,7 +16,8 @@ urlpatterns = [
     path('join-class/', join_class, name='join_class'),
     path('create-class/', create_class, name='create_class'),  # Add the new route
     path('account_management/', account_management, name='account_management'),
-    path('add_student/', add_student, name='add_student'),
+    path('search_students/', search_students, name='search_students'),
+    path('add_students/', add_students, name='add_students'),
     path('edit_classroom/', edit_classroom, name='edit_classroom'),
 
     path('remove_student/', views.remove_student, name='remove_student'),

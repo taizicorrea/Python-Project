@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%u1%x*6jg-lpu&dl!sv2ao03a3=48-liglk%zh9v--13t3=pi0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['f819-120-29-86-16.ngrok-free.app', '127.0.0.1']
 
 
 # Application definition
@@ -135,3 +135,10 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# settings.py
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://f819-120-29-86-16.ngrok-free.app',
+    'http://127.0.0.1:8000/'
+]

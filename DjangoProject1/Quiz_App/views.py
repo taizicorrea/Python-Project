@@ -5,6 +5,7 @@ import string
 from io import BytesIO
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
@@ -15,6 +16,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.urls import reverse
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from weasyprint import HTML
 from django.templatetags.static import static
 
@@ -23,6 +25,10 @@ from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Classroom, Quiz, Question, StudentQuizScore
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -71,44 +77,63 @@ def login_view(request):
     response['Cache-Control'] = 'no-store'
     return response
 
-
-# Add Student in a Classroom
-def add_student(request):
+@csrf_exempt  # Use this if CSRF middleware is causing issues
+def add_students(request):
     if request.method == "POST":
-        classroom_id = request.POST.get('classroom_id')
-        print("Classroom ID from POST:", classroom_id)  # Debugging: Check the classroom ID
+        try:
+            data = json.loads(request.body)  # Parse JSON payload
+            classroom_id = data.get('classroom_id')
+            student_ids = data.get('student_ids')
 
-        form = AddStudentForm(request.POST)
-        if form.is_valid():
+            if not classroom_id or not student_ids:
+                return JsonResponse({"error": "Missing classroom_id or student_ids."}, status=400)
+
             classroom = get_object_or_404(Classroom, id=classroom_id)
+            added_students = []
+            already_enrolled = []
 
-            student_email_or_username = form.cleaned_data['email_or_username']
-
-            try:
-                student = User.objects.get(email=student_email_or_username)
-            except User.DoesNotExist:
+            for student_id in student_ids:
                 try:
-                    student = User.objects.get(username=student_email_or_username)
+                    student = User.objects.get(id=student_id)
+                    if student in classroom.students.all():
+                        already_enrolled.append(f"{student.first_name} {student.last_name}")
+                    else:
+                        classroom.students.add(student)
+                        added_students.append(f"{student.first_name} {student.last_name}")
                 except User.DoesNotExist:
-                    messages.error(request, "Student not found.")
-                    return redirect('landing')  # Redirect to landing without classroom_id
+                    return JsonResponse({"error": f"Student with ID {student_id} does not exist."}, status=404)
 
-            classroom.students.add(student)
             classroom.save()
+            return JsonResponse({
+                "success": True,
+                "added_students": added_students,
+                "already_enrolled": already_enrolled,
+            })
 
-            messages.success(request,f"Student {student.first_name} {student.last_name} has been added to the classroom.")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON payload."}, status=400)
 
-            # Redirect to the same page but include the classroom_id in the query string
-            return HttpResponseRedirect(f"{reverse('landing')}?classroom_id={classroom.id}")
+    return JsonResponse({"error": "Invalid request method."}, status=405)
 
-        else:
-            messages.error(request, "Form is not valid.")
-            return redirect('landing')  # Redirect to landing without classroom_id
-    else:
-        form = AddStudentForm()
+def search_students(request):
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse([], safe=False)
 
-    return render(request, 'landing_page.html', {'add_student': form})
+    try:
+        students = User.objects.filter(
+            Q(username__icontains=query) |
+            Q(email__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        ).exclude(
+            Q(profile__role='teacher') | Q(is_superuser=True)
+        ).values('id', 'username', 'email', 'first_name', 'last_name')[:10]
 
+        return JsonResponse({"students": list(students)}, safe=False)
+    except Exception as e:
+        logger.error(f"Error fetching students: {e}")
+        return JsonResponse({"error": "An error occurred while fetching students."}, status=500)
 
 # Uneroll student from the classroom
 def unenroll_student(request, classroom_id):
