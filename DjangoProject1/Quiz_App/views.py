@@ -24,7 +24,7 @@ from .forms import CustomAuthenticationForm, QuizForm, SignupForm, JoinClassForm
     PasswordChangeForm, AddStudentForm, QuestionForm, EditClassroomForm, EditQuestionForm
 from django.contrib.auth import logout
 from django.contrib import messages
-from .models import Classroom, Quiz, Question, StudentQuizScore
+from .models import Classroom, Quiz, Question, StudentQuizScore, Profile
 
 import logging
 
@@ -76,6 +76,7 @@ def login_view(request):
     response = render(request, 'Quiz_App/login.html', {'form': form})
     response['Cache-Control'] = 'no-store'
     return response
+
 
 @csrf_exempt  # Use this if CSRF middleware is causing issues
 def add_students(request):
@@ -325,6 +326,28 @@ def edit_classroom(request):
         'form': form,
     })
 
+def set_role_password(request):
+    if request.method == "POST":
+        role = request.POST.get('role')
+        password = request.POST.get('password')
+
+        if role and password:
+            user = request.user
+            user.set_password(password)
+            user.save()
+
+            # Ensure the profile exists
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.role = role
+            profile.save()
+
+            return redirect('landing_page')  # Redirect to the named landing page
+
+        return render(request, 'Quiz_App/set_role_password.html', {"error": "All fields are required."})
+
+    return render(request, 'Quiz_App/set_role_password.html')
+
+
 @login_required
 def landing_page(request):
     classrooms = []
@@ -335,6 +358,10 @@ def landing_page(request):
     student_scores = {}
 
     if request.user.is_authenticated:
+        # Ensure the user has a profile
+        if not hasattr(request.user, 'profile') or not request.user.profile.role:
+            return redirect('set_role_password')
+
         # Fetch classrooms based on user's role
         if request.user.profile.role == 'teacher':
             classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
@@ -355,8 +382,9 @@ def landing_page(request):
 
             if request.user.profile.role == 'teacher':
                 # Fetch all quizzes and student scores for teachers
-                student_scores_query = StudentQuizScore.objects.filter(quiz__classroom=selected_classroom).select_related('student', 'quiz')
-                # Create a dictionary for easier lookup in templates
+                student_scores_query = StudentQuizScore.objects.filter(
+                    quiz__classroom=selected_classroom
+                ).select_related('student', 'quiz')
                 for score in student_scores_query:
                     if score.student_id not in student_scores:
                         student_scores[score.student_id] = {}
@@ -364,7 +392,9 @@ def landing_page(request):
             elif request.user.profile.role == 'student':
                 # Fetch only active quizzes and completed quizzes for students
                 quizzes = quizzes.filter(is_active=True)
-                completed_scores = StudentQuizScore.objects.filter(student=request.user, quiz__classroom=selected_classroom)
+                completed_scores = StudentQuizScore.objects.filter(
+                    student=request.user, quiz__classroom=selected_classroom
+                )
                 completed_quizzes = [score.quiz for score in completed_scores]
                 student_grades = {score.quiz.id: score.score for score in completed_scores}
 
@@ -378,11 +408,11 @@ def landing_page(request):
 
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
-        'selected_classroom': selected_classroom,  # Pass selected classroom
-        'quizzes': quizzes,  # Pass quizzes for the selected classroom
-        'completed_quizzes': completed_quizzes,  # For student grades tab
-        'student_grades': student_grades,  # For student grades
-        'student_scores': student_scores,  # For teacher grades (dictionary format)
+        'selected_classroom': selected_classroom,
+        'quizzes': quizzes,
+        'completed_quizzes': completed_quizzes,
+        'student_grades': student_grades,
+        'student_scores': student_scores,
         'join_form': join_form,
         'create_form': create_form,
         'edit_classroom': edit_classroom,
@@ -390,6 +420,7 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
     })
+
 
 # Home page view
 def home_view(request):

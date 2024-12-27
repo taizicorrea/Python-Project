@@ -114,6 +114,21 @@ class ProfileForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'id': 'email'}),
         }
 
+class CustomSignupForm(SignupForm):
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('teacher', 'Teacher'),
+    ]
+    role = forms.ChoiceField(choices=ROLE_CHOICES, required=True, label="Role")
+    password = forms.CharField(widget=forms.PasswordInput, required=True, label="Password")
+
+    def save(self, request):
+        user = super().save(request)
+        user.profile.role = self.cleaned_data['role']
+        user.set_password(self.cleaned_data['password'])
+        user.save()
+        return user
+
 # Django Form for Creating Class
 class CreateClassForm(forms.Form):
     class_name = forms.CharField(label='Class Name', max_length=100, required=True, widget=forms.TextInput(attrs={

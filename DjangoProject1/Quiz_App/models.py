@@ -1,5 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import User
+from allauth.account.forms import SignupForm
+from django import forms
+
+class CustomSignupForm(SignupForm):
+    role = forms.ChoiceField(
+        choices=[('student', 'Student'), ('teacher', 'Teacher')],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    def save(self, request):
+        user = super().save(request)
+        role = self.cleaned_data.get('role')
+        Profile.objects.create(user=user, role=role)  # Assuming a Profile model for role
+        return user
 
 class Profile(models.Model):
     ROLE_CHOICES = [
