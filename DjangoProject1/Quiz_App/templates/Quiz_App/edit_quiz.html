@@ -182,7 +182,32 @@ Edit Quiz - {{ quiz.title }}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // SweetAlert for Save Changes
+    const Toast = Swal.mixin({
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+    });
+
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                Toast.fire({
+                    icon: 'success',
+                    title: '{{ message }}'
+                });
+            {% elif message.tags == 'error' %}
+                Toast.fire({
+                    icon: 'error',
+                    title: '{{ message }}'
+                });
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</script>
+
+<script>
     document.getElementById('saveChangesBtn').addEventListener('click', function () {
         Swal.fire({
             title: 'Save Changes?',
@@ -194,13 +219,15 @@ Edit Quiz - {{ quiz.title }}
             confirmButtonText: 'Yes',
         }).then((result) => {
             if (result.isConfirmed) {
-                // Submit the form if the user confirms
                 document.getElementById('quizDetailsForm').submit();
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Changes are being saved...'
+                });
             }
         });
     });
 
-    // SweetAlert for Deleting a Question
     document.querySelectorAll('.delete-question-btn').forEach(button => {
         button.addEventListener('click', function () {
             const form = this.closest('form');
