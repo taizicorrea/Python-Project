@@ -26,6 +26,7 @@ class QuizAdmin(admin.ModelAdmin):
 class QuestionAdmin(admin.ModelAdmin):
     list_display = (
         'question_text',
+        'creator_display',
         'quizzes_display',
         'question_type',
         'options_display',
@@ -33,11 +34,11 @@ class QuestionAdmin(admin.ModelAdmin):
         'true_false_display',
     )
     search_fields = ('question_text', 'quizzes__title', 'correct_answers')
-    list_filter = ('question_type', 'quizzes__title')
+    list_filter = ('question_type', 'quizzes__title', 'creator')
     ordering = ('question_text',)
 
     def quizzes_display(self, obj):
-        """Display the quizzes associated with the question as a comma-separated list."""
+        """Display quizzes associated with the question."""
         quizzes = obj.quizzes.all()
         return ", ".join([quiz.title for quiz in quizzes]) if quizzes else "-"
     quizzes_display.short_description = 'Quizzes'
@@ -55,16 +56,35 @@ class QuestionAdmin(admin.ModelAdmin):
     correct_answers_display.short_description = 'Correct Answers'
 
     def true_false_display(self, obj):
-        """Display the True/False answer if applicable."""
+        """Display True/False answer if applicable."""
         if obj.question_type == 'true_false':
             return obj.correct_answers if obj.correct_answers else "-"
         return "-"
     true_false_display.short_description = 'True/False Answer'
 
+    def creator_display(self, obj):
+        """Display the username of the question creator."""
+        return obj.creator.username if obj.creator else "-"
+    creator_display.short_description = 'Creator'
+
     def save_model(self, request, obj, form, change):
-        """Override save_model to perform additional validation if needed."""
+        """
+        Automatically assign the creator to the logged-in user if the question is new.
+        """
+        if not obj.pk:  # If the object is new
+            obj.creator = request.user
         obj.full_clean()  # Ensure all validations are respected
         super().save_model(request, obj, form, change)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Limit the creator field to teachers in the admin interface.
+        """
+        if db_field.name == "creator":
+            kwargs["queryset"] = User.objects.filter(profile__role="teacher")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 
 @admin.register(StudentQuizScore)
 class StudentQuizScoreAdmin(admin.ModelAdmin):

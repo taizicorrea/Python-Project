@@ -82,6 +82,14 @@ class Question(models.Model):
             "For Identification, provide the exact text of the correct answer(s)."
         )
     )
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_questions',
+        blank=True,
+        null=True,
+        default=24
+    )
 
     def options_as_list(self):
         """

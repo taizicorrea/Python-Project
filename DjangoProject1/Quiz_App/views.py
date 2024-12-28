@@ -467,9 +467,9 @@ def create_quiz(request, classroom_id):
 
             for question in questions_data:
                 try:
-                    # Process existing questions
+                    # Process existing questions (only if they belong to the logged-in teacher)
                     if 'id' in question and isinstance(question['id'], int):
-                        existing_question = Question.objects.get(id=question['id'])
+                        existing_question = Question.objects.get(id=question['id'], creator=request.user)
                         quiz.questions.add(existing_question)
                         linked_existing_questions.append(existing_question.id)
                         print(f"Linked existing question ID {existing_question.id} to quiz ID {quiz.id}.")
@@ -481,13 +481,14 @@ def create_quiz(request, classroom_id):
                             question_type=question.get('question_type', 'multiple_choice'),
                             multiple_choice_options="\n".join(question.get('multiple_choice_options', [])),
                             correct_answers="\n".join(question.get('correct_answers', [])),
+                            creator=request.user  # Set the creator to the logged-in teacher
                         )
                         quiz.questions.add(new_question)
                         created_new_questions.append(new_question.id)
                         print(f"New question '{new_question.question_text}' created and linked to quiz ID {quiz.id}.")
 
                 except Question.DoesNotExist:
-                    messages.error(request, f"Question with ID {question['id']} does not exist.")
+                    messages.error(request, f"Question with ID {question['id']} does not exist or is not yours.")
                 except Exception as e:
                     messages.error(request, f"Failed to process question: {e}")
 
@@ -502,21 +503,35 @@ def create_quiz(request, classroom_id):
     else:
         form = QuizForm()
 
-    return render(request, 'Quiz_App/create_quiz.html', {'form': form, 'classroom': classroom})
+    # Fetch only questions created by the logged-in teacher
+    teacher_questions = Question.objects.filter(creator=request.user)
+
+    return render(request, 'Quiz_App/create_quiz.html', {
+        'form': form,
+        'classroom': classroom,
+        'questions': teacher_questions,
+    })
+
 
 
 # Fetch All Questions
 @login_required
 def get_questions(request):
     if request.method == 'GET':
-        questions = list(
-            Question.objects.values('id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers')
-        )
+        if request.user.profile.role == 'teacher':
+            questions = Question.objects.filter(creator=request.user).values(
+                'id', 'question_text', 'question_type', 'multiple_choice_options', 'correct_answers'
+            )
+        else:
+            questions = []  # Students or unauthorized users shouldn't fetch questions
+
         for question in questions:
             question['multiple_choice_options'] = question['multiple_choice_options'].split("\n") if question['multiple_choice_options'] else []
             question['correct_answers'] = question['correct_answers'].split("\n") if question['correct_answers'] else []
-        return JsonResponse({'questions': questions}, status=200)
+
+        return JsonResponse({'questions': list(questions)}, status=200)
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
 
 # Reset Quiz Session
 @login_required
@@ -580,6 +595,11 @@ def take_quiz(request, quiz_id):
     if quiz.due_date < now():  # Use Django's timezone-aware now
         messages.error(request, "This quiz is no longer available.")
         return redirect('landing')
+
+    # Check if the student has already taken the quiz
+    if StudentQuizScore.objects.filter(student=request.user, quiz=quiz).exists():
+        messages.error(request, "You have already taken this quiz.")
+        return redirect('landing')  # Redirect to the landing or classroom page
 
     if request.method == 'GET':
         questions = quiz.questions.all()
@@ -665,7 +685,6 @@ def get_quiz_questions(request, quiz_id):
         return JsonResponse({'questions': questions}, status=200)
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
 
 
 @login_required
@@ -789,8 +808,6 @@ def manage_quiz(request, quiz_id):
         },
     })
 
-
-
 @login_required
 def edit_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
@@ -840,6 +857,10 @@ def save_question(request):
             # Validate the quiz existence
             quiz = Quiz.objects.get(id=quiz_id)
 
+            # Check if the user is a teacher
+            if request.user.profile.role != 'teacher':
+                return JsonResponse({'success': False, 'error': 'Only teachers can create or modify questions.'}, status=403)
+
             # Additional validation based on question type
             if question_type == 'multiple_choice':
                 if not options:
@@ -855,14 +876,18 @@ def save_question(request):
 
             # Update existing question
             if question_id:
-                question = Question.objects.get(id=question_id)
-                question.question_text = question_text
-                question.question_type = question_type
-                question.multiple_choice_options = "\n".join(options) if options else ""
-                question.correct_answers = correct_answers.strip()
-                question.save()
+                try:
+                    question = Question.objects.get(id=question_id, creator=request.user)  # Ensure the creator is the logged-in teacher
+                    question.question_text = question_text
+                    question.question_type = question_type
+                    question.multiple_choice_options = "\n".join(options) if options else ""
+                    question.correct_answers = correct_answers.strip()
+                    question.save()
+                except Question.DoesNotExist:
+                    return JsonResponse({'success': False, 'error': 'Question not found or not authorized.'}, status=404)
             else:  # Create a new question
                 question = Question.objects.create(
+                    creator=request.user,  # Assign the logged-in teacher as the creator
                     question_text=question_text,
                     question_type=question_type,
                     multiple_choice_options="\n".join(options) if options else "",
@@ -873,16 +898,14 @@ def save_question(request):
             return JsonResponse({'success': True})
         except Quiz.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Quiz not found'}, status=404)
-        except Question.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Question not found.'}, status=404)
         except Exception as e:
             # Log the error for debugging
-            import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error saving question: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
 
 
 @login_required
@@ -900,12 +923,14 @@ def add_existing_questions(request):
         # Add selected questions to the quiz
         for question_id in question_ids:
             try:
-                question = Question.objects.get(id=question_id)
+                # Ensure that only the creator's questions can be added
+                question = Question.objects.get(id=question_id, creator=request.user)
                 quiz.questions.add(question)
             except Question.DoesNotExist:
-                messages.error(request, f"Question ID {question_id} does not exist.")
+                messages.error(request, f"Question ID {question_id} does not exist or is not yours.")
 
         messages.success(request, "Selected questions were added to the quiz.")
         return redirect("edit_quiz", quiz_id=quiz.id)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
+

@@ -230,12 +230,10 @@ class QuizForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        self.fields['timer'].required = True
-        self.fields['due_date'].required = True
 
     def clean_timer(self):
-        """Ensure the timer is a positive integer."""
         timer = self.cleaned_data.get('timer')
         if timer is None or timer < 1:
             raise forms.ValidationError("The timer must be a positive integer (minimum 1 minute).")
@@ -246,8 +244,6 @@ class QuizForm(forms.ModelForm):
         if due_date < now():
             raise forms.ValidationError("The due date cannot be in the past.")
         return due_date
-
-
 
 class QuestionForm(forms.Form):
     question_text = forms.CharField(
@@ -336,6 +332,10 @@ class BaseQuestionForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)  # Pass the user to filter questions by creator
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         cleaned_data = super().clean()
         question_type = cleaned_data.get('question_type')
@@ -348,11 +348,36 @@ class BaseQuestionForm(forms.ModelForm):
             raise ValidationError("Please provide correct answer(s).")
         return cleaned_data
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user:
+            instance.creator = self.user  # Assign the logged-in user as the creator
+        if commit:
+            instance.save()
+        return instance
+
+
 class AddQuestionForm(BaseQuestionForm):
-    pass  # No additional logic required for adding
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user:
+            instance.creator = self.user  # Ensure creator is the logged-in teacher
+        if commit:
+            instance.save()
+        return instance
+
 
 class EditQuestionForm(BaseQuestionForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.question_type == 'true_false':
             self.fields['multiple_choice_options'].widget = forms.HiddenInput()
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Ensure only the creator can edit the question
+        if self.user and self.instance.creator != self.user:
+            raise ValidationError("You are not authorized to edit this question.")
+        if commit:
+            instance.save()
+        return instance
