@@ -32,6 +32,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.8/dist/sweetalert2.min.js"></script>
 </head>
 <body>
+
     <!-- Header -->
     <div class="header">
         <div class="d-flex align-items-center">
@@ -75,7 +76,7 @@
     </div>
 
     <!-- Main Layout -->
-<div class="d-flex">
+    <div class="d-flex">
     <!-- Sidebar -->
     <div class="sidebar expanded" id="sidebar">
         <a href="{% url 'landing' %}" class="active">
@@ -125,7 +126,7 @@
                                     <p class="mb-0">{{ classroom.subject }}</p>
                                 </div>
                                 <div class="dropdown">
-                                    <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="dropdown">
+                                    <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end p-0">
@@ -141,9 +142,6 @@
                                             <form action="{% url 'delete_classroom' classroom.id %}" method="post">
                                                 {% csrf_token %}
                                                 <button type="submit" class="dropdown-item">Delete</button>
-                                                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editClassModal">
-                                                    Edit
-                                                </button>
                                             </form>
                                         </li>
                                         {% endif %}
@@ -437,9 +435,7 @@
         </div>
         {% endif %}
     </div>
-</div>
-
-
+    </div>
 
    <!-- Add Student Modal -->
     <div class="modal fade" id="addStudent" tabindex="-1" aria-labelledby="addStudentLabel" aria-hidden="true">
@@ -486,9 +482,6 @@
             </div>
         </div>
     </div>
-
-
-
 
     <!-- Modal for Account Management -->
     <div class="modal fade {% if modal_open %}show{% endif %}" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true" {% if modal_open %}style="display: block;"{% endif %}>
@@ -597,7 +590,6 @@
                 </div>
             </div>
         </div>
-
 
         <!-- Join Class -->
         <div class="modal fade" id="joinClassModal" tabindex="-1" aria-labelledby="joinClassModalLabel" aria-hidden="true">
