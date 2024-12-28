@@ -390,13 +390,12 @@ def landing_page(request):
                         student_scores[score.student_id] = {}
                     student_scores[score.student_id][score.quiz_id] = score.score
             elif request.user.profile.role == 'student':
-                # Fetch only active quizzes and completed quizzes for students
-                quizzes = quizzes.filter(is_active=True)
+                # Fetch all quizzes (including inactive) for grades
                 completed_scores = StudentQuizScore.objects.filter(
                     student=request.user, quiz__classroom=selected_classroom
-                )
+                ).select_related('quiz')
                 completed_quizzes = [score.quiz for score in completed_scores]
-                student_grades = {score.quiz.id: score.score for score in completed_scores}
+                student_grades = {score.quiz.id: score for score in completed_scores}
 
     # Forms for various modals
     join_form = JoinClassForm()
@@ -420,6 +419,7 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
     })
+
 
 
 # Home page view
