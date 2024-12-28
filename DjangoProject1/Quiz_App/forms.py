@@ -68,13 +68,15 @@ class SignupForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])  # Hash password
+        user.set_password(self.cleaned_data['password'])  # Hash the password
         if commit:
-            user.save()
-            # Create a Profile with role selection
-            role = self.cleaned_data['role']
-            Profile.objects.create(user=user, role=role)
+            user.save()  # Signals will handle Profile creation
+            # Update the role for the automatically created Profile
+            profile = user.profile
+            profile.role = self.cleaned_data['role']
+            profile.save()
         return user
+
 
 class JoinClassForm(forms.Form):
     class_code = forms.CharField(
