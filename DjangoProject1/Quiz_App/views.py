@@ -339,40 +339,49 @@ def landing_page(request):
     student_grades = {}
     student_scores = {}
 
-    if request.user.is_authenticated:
-        if not hasattr(request.user, 'profile') or not request.user.profile.role:
-            return redirect('set_role_password')
+    # Ensure the user has a profile and role set
+    if not hasattr(request.user, 'profile') or not request.user.profile.role:
+        return redirect('set_role_password')
+
+    # Fetch classrooms based on the user's role
+    if request.user.profile.role == 'teacher':
+        classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
+    elif request.user.profile.role == 'student':
+        classrooms = request.user.classrooms.all().prefetch_related('students')
+
+    # Fetch the selected classroom ID
+    classroom_id = request.GET.get('classroom_id')
+    if classroom_id:
+        selected_classroom = get_object_or_404(Classroom, id=classroom_id)
+
+        # Fetch quizzes associated with the classroom
+        quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
+
+        # Update quiz status if overdue
+        for quiz in quizzes:
+            if quiz.due_date < now() and quiz.is_active:
+                quiz.is_active = False
+                quiz.save()
 
         if request.user.profile.role == 'teacher':
-            classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
+            # Fetch student scores for teacher's view
+            student_scores_query = StudentQuizScore.objects.filter(
+                quiz__classroom=selected_classroom
+            ).select_related('student', 'quiz')
+            for score in student_scores_query:
+                if score.student_id not in student_scores:
+                    student_scores[score.student_id] = {}
+                student_scores[score.student_id][score.quiz_id] = score.score
+
         elif request.user.profile.role == 'student':
-            classrooms = request.user.classrooms.all().prefetch_related('students')
+            # Fetch completed quizzes and grades for student
+            completed_scores = StudentQuizScore.objects.filter(
+                student=request.user, quiz__classroom=selected_classroom
+            ).select_related('quiz')
+            completed_quizzes = [score.quiz for score in completed_scores]
+            student_grades = {score.quiz.id: score.score for score in completed_scores}
 
-            classroom_id = request.GET.get('classroom_id')
-        if classroom_id:
-            selected_classroom = get_object_or_404(Classroom, id=classroom_id)
-
-            quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
-            for quiz in quizzes:
-                if quiz.due_date < now() and quiz.is_active:
-                    quiz.is_active = False
-                    quiz.save()
-
-            if request.user.profile.role == 'teacher':
-                student_scores_query = StudentQuizScore.objects.filter(
-                    quiz__classroom=selected_classroom
-                ).select_related('student', 'quiz')
-                for score in student_scores_query:
-                    if score.student_id not in student_scores:
-                        student_scores[score.student_id] = {}
-                    student_scores[score.student_id][score.quiz_id] = score.score
-            elif request.user.profile.role == 'student':
-                completed_scores = StudentQuizScore.objects.filter(
-                    student=request.user, quiz__classroom=selected_classroom
-                ).select_related('quiz')
-                completed_quizzes = [score.quiz for score in completed_scores]
-                student_grades = {score.quiz.id: score for score in completed_scores}
-
+    # Prepare forms for various modals
     join_form = JoinClassForm()
     create_form = CreateClassForm()
     profile_form = ProfileForm(instance=request.user)
@@ -380,6 +389,7 @@ def landing_page(request):
     add_student = AddStudentForm()
     edit_classroom = EditClassroomForm()
 
+    # Render the landing page
     return render(request, 'Quiz_App/landing_page.html', {
         'classrooms': classrooms,
         'selected_classroom': selected_classroom,
@@ -394,6 +404,7 @@ def landing_page(request):
         'password_form': password_form,
         'add_student': add_student,
     })
+
 
 def home_view(request):
     return render(request, 'Quiz_App/home.html')
@@ -797,8 +808,8 @@ def edit_quiz(request, quiz_id):
     else:
         form = QuizForm(instance=quiz)
 
-    # Fetch all questions not currently part of the quiz
-    existing_questions = Question.objects.exclude(quizzes=quiz)
+    # Fetch only questions created by the current teacher and not currently part of the quiz
+    existing_questions = Question.objects.filter(creator=request.user).exclude(quizzes=quiz)
 
     return render(
         request,
@@ -809,6 +820,7 @@ def edit_quiz(request, quiz_id):
             "existing_questions": existing_questions,
         },
     )
+
 
 @csrf_exempt
 def save_question(request):

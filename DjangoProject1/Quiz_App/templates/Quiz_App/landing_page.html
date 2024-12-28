@@ -290,30 +290,30 @@
             </thead>
             <tbody>
                 {% for quiz in quizzes %}
-                <tr>
-                    <td>{{ quiz.due_date|date:"M d, Y h:i A" }}</td>
-                    <td>{{ quiz.title }}</td>
-                    <td>
-                        {% if quiz in completed_quizzes %}
-                        <span class="badge bg-success">Completed</span>
-                        {% else %}
-                        <span class="badge bg-secondary">Not Taken</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% with grade=student_grades|get_item:quiz.id %}
-                            {% if grade %}
-                                {{ grade.score }}/{{ quiz.questions.count }}
+                    <tr>
+                        <td>{{ quiz.due_date|date:"M d, Y h:i A" }}</td>
+                        <td>{{ quiz.title }}</td>
+                        <td>
+                            {% if quiz in completed_quizzes %}
+                                <span class="badge bg-success">Completed</span>
                             {% else %}
-                                <span class="text-muted">N/A</span>
+                                <span class="badge bg-secondary">Not Taken</span>
                             {% endif %}
-                        {% endwith %}
-                    </td>
-                </tr>
+                        </td>
+                        <td>
+                            {% with student_grades|get_item:quiz.id as grade %}
+                                {% if grade %}
+                                    {{ grade }}/{{ quiz.questions.count }}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center text-muted">No quizzes available.</td>
-                </tr>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No quizzes available.</td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>
