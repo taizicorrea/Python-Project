@@ -236,90 +236,75 @@ def join_class(request):
             class_code = form.cleaned_data['class_code']
 
             try:
-                # Try to get the Classroom object based on the class_code
                 classroom = Classroom.objects.get(class_code=class_code)
 
-                # Check if the user is already enrolled in the classroom
                 if request.user in classroom.students.all():
                     messages.warning(request, "You are already enrolled in this classroom.")
                 else:
-                    # Add the user to the students list
                     classroom.students.add(request.user)
                     messages.success(request, f"You have successfully joined the class: {classroom.class_name}")
 
-                return redirect('landing')  # Redirect to landing page or classroom list
+                return redirect('landing')
 
             except Classroom.DoesNotExist:
                 messages.error(request, "Invalid class code. Please try again.")
-
         else:
             messages.error(request, "Invalid input. Please ensure the class code is correct.")
-
-        return redirect('landing') # Redirect back to the form page for retry
-
+        return redirect('landing')
     else:
         form = JoinClassForm()
     return render(request, 'Quiz_App/landing_page.html', {'form': form})
 
-
-# View for Generate Class Code in Classroom
 def generate_class_code(length=7):
-    characters = string.ascii_letters + string.digits  # Letters (both uppercase and lowercase) and digits
+    characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
-# View for Create Class in Teacher Role
+
 @login_required
 def create_class(request):
     if request.method == 'POST':
         form = CreateClassForm(request.POST)
         if form.is_valid():
-            # Extract form data
             class_name = form.cleaned_data['class_name']
             section = form.cleaned_data['section']
             subject = form.cleaned_data['subject']
             room = form.cleaned_data['room']
-
-            # Generate a random class code
             class_code = generate_class_code()
 
-            # Create new class and save to the database
             classroom = Classroom.objects.create(
-                teacher=request.user,  # Automatically uses the primary key (user.id)
+                teacher=request.user,
                 class_name=class_name,
                 section=section,
                 subject=subject,
                 room=room,
-                class_code=class_code  # Save the generated class code
+                class_code=class_code
             )
 
             messages.success(request, f"Class '{class_name}' created successfully!")
-            return redirect('landing')  # Redirect to your landing page or dashboard
+            return redirect('landing')
         else:
             messages.error(request, "There was an error creating the class.")
     else:
-        form = CreateClassForm()  # Empty form for GET request
-
+        form = CreateClassForm()
     return render(request, 'landing_page.html', {'form': form})
 
 
-# Edit Classroom in Details
+
 def edit_classroom(request):
     if request.method == 'POST':
-        classroom_id = request.POST.get('modal-classroom-id')  # Get the classroom ID from the hidden field
-        classroom = get_object_or_404(Classroom, id=classroom_id)  # Get the classroom instance
-        form = EditClassroomForm(request.POST, instance=classroom)  # Populate form with data
+        classroom_id = request.POST.get('modal-classroom-id')
+        classroom = get_object_or_404(Classroom, id=classroom_id)
+        form = EditClassroomForm(request.POST, instance=classroom)
 
         if form.is_valid():
             form.save()  # Save the updated classroom
             messages.success(request, 'Classroom updated successfully!')
-            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+            return redirect('landing')
         else:
-            # If there are form errors, print them (optional) and show an error message
-            print(form.errors)  # Optional: for debugging form errors
+            print(form.errors)
             messages.error(request, 'There was an error updating the classroom.')
-            return redirect('landing')  # Redirect to the same page and show the updated classroom details
+            return redirect('landing')
     else:
-        # If it's a GET request, display the form
         form = EditClassroomForm()
 
     return render(request, 'Quiz_App/landing_page.html', {
@@ -336,15 +321,12 @@ def set_role_password(request):
             user.set_password(password)
             user.save()
 
-            # Ensure the profile exists
             profile, created = Profile.objects.get_or_create(user=user)
             profile.role = role
             profile.save()
 
-            return redirect('landing_page')  # Redirect to the named landing page
-
+            return redirect('landing_page')
         return render(request, 'Quiz_App/set_role_password.html', {"error": "All fields are required."})
-
     return render(request, 'Quiz_App/set_role_password.html')
 
 
@@ -358,22 +340,18 @@ def landing_page(request):
     student_scores = {}
 
     if request.user.is_authenticated:
-        # Ensure the user has a profile
         if not hasattr(request.user, 'profile') or not request.user.profile.role:
             return redirect('set_role_password')
 
-        # Fetch classrooms based on user's role
         if request.user.profile.role == 'teacher':
             classrooms = Classroom.objects.filter(teacher=request.user).prefetch_related('students')
         elif request.user.profile.role == 'student':
             classrooms = request.user.classrooms.all().prefetch_related('students')
 
-        # Fetch selected classroom details based on query parameter
-        classroom_id = request.GET.get('classroom_id')
+            classroom_id = request.GET.get('classroom_id')
         if classroom_id:
             selected_classroom = get_object_or_404(Classroom, id=classroom_id)
 
-            # Fetch quizzes and update their status based on due date
             quizzes = Quiz.objects.filter(classroom=selected_classroom).order_by('due_date')
             for quiz in quizzes:
                 if quiz.due_date < now() and quiz.is_active:
@@ -381,7 +359,6 @@ def landing_page(request):
                     quiz.save()
 
             if request.user.profile.role == 'teacher':
-                # Fetch all quizzes and student scores for teachers
                 student_scores_query = StudentQuizScore.objects.filter(
                     quiz__classroom=selected_classroom
                 ).select_related('student', 'quiz')
@@ -390,14 +367,12 @@ def landing_page(request):
                         student_scores[score.student_id] = {}
                     student_scores[score.student_id][score.quiz_id] = score.score
             elif request.user.profile.role == 'student':
-                # Fetch all quizzes (including inactive) for grades
                 completed_scores = StudentQuizScore.objects.filter(
                     student=request.user, quiz__classroom=selected_classroom
                 ).select_related('quiz')
                 completed_quizzes = [score.quiz for score in completed_scores]
                 student_grades = {score.quiz.id: score for score in completed_scores}
 
-    # Forms for various modals
     join_form = JoinClassForm()
     create_form = CreateClassForm()
     profile_form = ProfileForm(instance=request.user)
@@ -420,13 +395,10 @@ def landing_page(request):
         'add_student': add_student,
     })
 
-
-
-# Home page view
 def home_view(request):
     return render(request, 'Quiz_App/home.html')
 
-# Logout view
+
 def logout_view(request):
     logout(request)
     response = redirect('login')
