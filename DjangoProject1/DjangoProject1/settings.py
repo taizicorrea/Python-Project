@@ -11,7 +11,7 @@ SECRET_KEY = 'django-insecure-%u1%x*6jg-lpu&dl!sv2ao03a3=48-liglk%zh9v--13t3=pi0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['c553-120-29-86-16.ngrok-free.app', '127.0.0.1']
+ALLOWED_HOSTS = ['04d0-120-29-86-16.ngrok-free.app', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -114,7 +114,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
-    'https://c553-120-29-86-16.ngrok-free.app',
+    'https://04d0-120-29-86-16.ngrok-free.app',
     'http://127.0.0.1:8000',
     'https://127.0.0.1:8000',
 ]
@@ -135,7 +135,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'OAUTH_PKCE_ENABLED': True,
-        'REDIRECT_URI': 'https://c553-120-29-86-16.ngrok-free.app/accounts/google/login/callback/'
+        'REDIRECT_URI': 'https://04d0-120-29-86-16.ngrok-free.app/accounts/google/login/callback/'
     }
 }
 
